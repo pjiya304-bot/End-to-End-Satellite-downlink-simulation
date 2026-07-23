@@ -1,0 +1,74 @@
+%% PHASE 4: BER CURVE
+
+Eb_N0_range_dB = 0:2:14;
+BER_theory     = zeros(size(Eb_N0_range_dB));
+BER_sim        = zeros(size(Eb_N0_range_dB));
+
+for idx = 1:length(Eb_N0_range_dB)
+    en = 10^(Eb_N0_range_dB(idx)/10);
+    
+    % Theory
+    BER_theory(idx) = 0.5*erfc(sqrt(en));
+    
+    % Simulation
+    b = randi([0,1], 2000, 1);
+    bp = reshape(b, 2, 1000).';
+    I_s = 1 - 2*bp(:,1);
+    Q_s = 1 - 2*bp(:,2);
+    I_u = kron(I_s, ones(samples_per_symbol,1));
+    Q_u = kron(Q_s, ones(samples_per_symbol,1));
+    I_sh = conv(I_u, h_rrc, 'same');
+    Q_sh = conv(Q_u, h_rrc, 'same');
+    tt  = (0:length(I_u)-1).' / fs;
+    cc  = cos(2*pi*f_carrier*tt);
+    ss  = sin(2*pi*f_carrier*tt);
+    tx  = I_sh.*cc - Q_sh.*ss;
+    
+    sp    = mean(tx.^2);
+    nv    = sp / (en*2);
+    nn    = sqrt(nv)*randn(size(tx));
+    rx    = tx + nn;
+    
+    Id =  rx.*cc;
+    Qd = -rx.*ss;
+    
+    Im = conv(Id, h_rrc, 'same');
+    Qm = conv(Qd, h_rrc, 'same');
+    If = Im(sample_offset+1 : samples_per_symbol : end);
+    Qf = Qm(sample_offset+1 : samples_per_symbol : end);
+    
+    rb = zeros(2000,1);
+    for m = 1:1000
+        rb((m-1)*2+1) = (If(m)<0);
+        rb((m-1)*2+2) = (Qf(m)<0);
+    end
+    
+    BER_sim(idx) = sum(b ~= rb) / 2000;
+end
+
+% Plot BER curve
+figure;
+semilogy(Eb_N0_range_dB, BER_theory, 'b-', 'LineWidth', 2);
+hold on;
+semilogy(Eb_N0_range_dB, max(BER_sim, 1e-4), 'ro--');
+plot([Eb_N0_dB Eb_N0_dB], [1e-4 1], 'k--');
+grid on;
+xlabel('Eb/N0 (dB)');
+ylabel('BER');
+title('BER vs Eb/N0 — QPSK Simulation vs Theory');
+legend('Theory', 'Simulation', 'Operating Point');
+ylim([1e-4 1]);
+
+%% RESULTS
+fprintf('\n=== SATELLITE LINK RESULTS ===\n');
+fprintf('FSPL:            %.2f dB\n', fspl_db);
+fprintf('Total Loss:      %.2f dB\n', total_loss_db);
+fprintf('Total Gain:      %.2f dB\n', total_gain_db);
+fprintf('Link Margin:     %.2f dB\n', link_margin_db);
+fprintf('SNR:             %.2f dB\n', SNR_dB);
+fprintf('Eb/N0:           %.2f dB\n', Eb_N0_dB);
+fprintf('Bits Sent:       %d\n', num_bits);
+fprintf('Errors:          %d\n', num_errors);
+fprintf('Simulated BER:   %.4f%%\n', BER_simulated*100);
+fprintf('Theoretical BER: %.4f%%\n', 0.5*erfc(sqrt(Eb_N0_lin))*100);
+fprintf('==============================\n');
