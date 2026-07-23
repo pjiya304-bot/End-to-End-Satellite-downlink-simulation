@@ -1,0 +1,221 @@
+clear; clc;
+
+%% PARAMETERS
+num_bits           = 1000;
+f_carrier          = 10e6;
+fs                 = 100e6;
+samples_per_symbol = 10;
+impedance          = 50;
+span = 6;    % RRC filter span, in symbols
+beta = 0.35; % RRC roll off factor
+
+%--- RRC Filter Design ---
+% It is built once but used at both the transmitter and receiver
+t_rrc = linspace(-span/2, span/2, span*samples_per_symbol);
+h_rrc = rrc_filter(t_rrc, beta);
+h_rrc = h_rrc(:);
+
+%% PHASE 1: TRANSMITTER
+
+% Generate random bits
+bits = randi([0,1], num_bits, 1);
+
+% Pair bits and map to QPSK symbols
+bit_pairs = reshape(bits, 2, num_bits/2).';
+symbols   = bit_pairs(:,1)*2 + bit_pairs(:,2);
+
+% Map symbols to I and Q directly 
+% 0 -> ( 1, 1)
+% 1 -> (-1, 1)  
+% 2 -> ( 1,-1)
+% 3 -> (-1,-1)
+I_symbols = 1 - 2*bit_pairs(:,1);   % bit=0 -> +1, bit=1 -> -1
+Q_symbols = 1 - 2*bit_pairs(:,2);   % bit=0 -> +1, bit=1 -> -1
+
+% Upsample
+I_up = kron(I_symbols, ones(samples_per_symbol, 1));
+Q_up = kron(Q_symbols, ones(samples_per_symbol, 1));
+
+% Pulse shape with RRC Filter
+I_shaped = conv(I_up, h_rrc, 'same');
+Q_shaped = conv(Q_up, h_rrc, 'same');
+
+% Create time vector and carriers
+N = length(I_up);
+t = (0:N-1).' / fs;
+carrier_cos = cos(2*pi*f_carrier*t);
+carrier_sin = sin(2*pi*f_carrier*t);
+
+% Modulate
+tx_wave = I_shaped.*carrier_cos - Q_shaped.*carrier_sin;
+
+% Plot transmitter
+figure;
+subplot(2,1,1);
+plot(t(1:100)*1e6, tx_wave(1:100), 'b');
+title('Transmitted Wave'); xlabel('Time (us)'); grid on;
+
+subplot(2,1,2);
+plot(I_symbols, Q_symbols, 'ro', 'MarkerFaceColor', 'r');
+axis([-2 2 -2 2]); grid on;
+title('Transmitted Constellation');
+xlabel('I'); ylabel('Q');
+
+%% PHASE 2: CHANNEL
+
+% Link budget
+d_satellite        = 36000e3;
+c_speed            = 3e8;
+rain_loss_db       = 3.5;
+antenna_loss_db    = 1.5;
+tx_power_dBW       = 17;
+tx_antenna_gain_db = 30;
+rx_antenna_gain_db = 110;
+
+% Free space path loss
+fspl_db = 20*log10(4*pi*d_satellite*f_carrier/c_speed);
+
+% Total losses and total gains
+total_loss_db  = fspl_db + rain_loss_db + antenna_loss_db;
+total_gain_db  = tx_power_dBW + tx_antenna_gain_db + rx_antenna_gain_db;
+link_margin_db = total_gain_db - total_loss_db;
+
+% Fade the wave by path loss
+loss_factor = 10^(-total_loss_db/20);   % voltage factor
+faded_wave  = tx_wave * loss_factor;
+
+% Add noise based on link margin
+SNR_linear        = 10^(link_margin_db/10);
+signal_power      = mean(faded_wave.^2);
+noise_var         = signal_power / SNR_linear;
+noise             = sqrt(noise_var) * randn(N, 1);
+rx_wave           = faded_wave + noise;
+
+% Compute SNR and Eb/N0
+SNR_dB    = 10*log10(signal_power / noise_var);
+Eb_N0_dB  = SNR_dB - 10*log10(2);
+Eb_N0_lin = 10^(Eb_N0_dB/10);
+
+% Plot channel
+figure;
+subplot(2,1,1);
+plot(t(1:100)*1e6, faded_wave(1:100), 'k');
+title(sprintf('After %.1f dB Path Loss', total_loss_db)); grid on;
+
+subplot(2,1,2);
+plot(t(1:100)*1e6, rx_wave(1:100), 'r');
+title(sprintf('Received Signal + Noise | SNR=%.1f dB | Eb/N0=%.1f dB', SNR_dB, Eb_N0_dB));
+grid on;
+
+%% PHASE 3: RECEIVER
+
+% Demodulate
+I_dem =  rx_wave .* carrier_cos;
+Q_dem = -rx_wave .* carrier_sin;
+
+% Matched RRC Filter
+I_matched = conv(I_dem, h_rrc, 'same');
+Q_matched = conv(Q_dem, h_rrc, 'same');
+
+sample_offset = floor(samples_per_symbol/2);
+I_filt = I_matched(sample_offset+1 : samples_per_symbol : end);
+Q_filt = Q_matched(sample_offset+1 : samples_per_symbol : end);
+
+% Decision — direct sign decision matches the simple mapping above
+% I positive -> bit1 = 0, I negative -> bit1 = 1
+% Q positive -> bit2 = 0, Q negative -> bit2 = 1
+recovered_bits = zeros(num_bits, 1);
+for m = 1:(num_bits/2)
+    recovered_bits((m-1)*2 + 1) = (I_filt(m) < 0);
+    recovered_bits((m-1)*2 + 2) = (Q_filt(m) < 0);
+end
+
+% Count errors
+num_errors    = sum(bits ~= recovered_bits);
+BER_simulated = num_errors / num_bits;
+
+% Plot received constellation
+figure;
+plot(I_filt, Q_filt, 'b.');
+hold on;
+plot([0 0], [-2 2], 'k--');
+plot([-2 2], [0 0], 'k--');
+axis([-2 2 -2 2]); grid on;
+title(sprintf('Received Constellation | Eb/N0=%.1f dB | BER=%.2f%%', Eb_N0_dB, BER_simulated*100));
+xlabel('I'); ylabel('Q');
+
+%% PHASE 4: BER CURVE
+
+Eb_N0_range_dB = 0:2:14;
+BER_theory     = zeros(size(Eb_N0_range_dB));
+BER_sim        = zeros(size(Eb_N0_range_dB));
+
+for idx = 1:length(Eb_N0_range_dB)
+    en = 10^(Eb_N0_range_dB(idx)/10);
+    
+    % Theory
+    BER_theory(idx) = 0.5*erfc(sqrt(en));
+    
+    % Simulation
+    b = randi([0,1], 2000, 1);
+    bp = reshape(b, 2, 1000).';
+    I_s = 1 - 2*bp(:,1);
+    Q_s = 1 - 2*bp(:,2);
+    I_u = kron(I_s, ones(samples_per_symbol,1));
+    Q_u = kron(Q_s, ones(samples_per_symbol,1));
+    I_sh = conv(I_u, h_rrc, 'same');
+    Q_sh = conv(Q_u, h_rrc, 'same');
+    tt  = (0:length(I_u)-1).' / fs;
+    cc  = cos(2*pi*f_carrier*tt);
+    ss  = sin(2*pi*f_carrier*tt);
+    tx  = I_sh.*cc - Q_sh.*ss;
+    
+    sp    = mean(tx.^2);
+    nv    = sp / (en*2);
+    nn    = sqrt(nv)*randn(size(tx));
+    rx    = tx + nn;
+    
+    Id =  rx.*cc;
+    Qd = -rx.*ss;
+    
+    Im = conv(Id, h_rrc, 'same');
+    Qm = conv(Qd, h_rrc, 'same');
+    If = Im(sample_offset+1 : samples_per_symbol : end);
+    Qf = Qm(sample_offset+1 : samples_per_symbol : end);
+    
+    rb = zeros(2000,1);
+    for m = 1:1000
+        rb((m-1)*2+1) = (If(m)<0);
+        rb((m-1)*2+2) = (Qf(m)<0);
+    end
+    
+    BER_sim(idx) = sum(b ~= rb) / 2000;
+end
+
+% Plot BER curve
+figure;
+semilogy(Eb_N0_range_dB, BER_theory, 'b-', 'LineWidth', 2);
+hold on;
+semilogy(Eb_N0_range_dB, max(BER_sim, 1e-4), 'ro--');
+plot([Eb_N0_dB Eb_N0_dB], [1e-4 1], 'k--');
+grid on;
+xlabel('Eb/N0 (dB)');
+ylabel('BER');
+title('BER vs Eb/N0 — QPSK Simulation vs Theory');
+legend('Theory', 'Simulation', 'Operating Point');
+ylim([1e-4 1]);
+
+%% RESULTS
+fprintf('\n=== SATELLITE LINK RESULTS ===\n');
+fprintf('FSPL:            %.2f dB\n', fspl_db);
+fprintf('Total Loss:      %.2f dB\n', total_loss_db);
+fprintf('Total Gain:      %.2f dB\n', total_gain_db);
+fprintf('Link Margin:     %.2f dB\n', link_margin_db);
+fprintf('SNR:             %.2f dB\n', SNR_dB);
+fprintf('Eb/N0:           %.2f dB\n', Eb_N0_dB);
+fprintf('Bits Sent:       %d\n', num_bits);
+fprintf('Errors:          %d\n', num_errors);
+fprintf('Simulated BER:   %.4f%%\n', BER_simulated*100);
+fprintf('Theoretical BER: %.4f%%\n', 0.5*erfc(sqrt(Eb_N0_lin))*100);
+fprintf('==============================\n');
+
