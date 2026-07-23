@@ -1,0 +1,62 @@
+clear; clc;
+
+%% PARAMETERS
+num_bits           = 1000;
+f_carrier          = 10e6;
+fs                 = 100e6;
+samples_per_symbol = 10;
+impedance          = 50;
+span = 6;    % RRC filter span, in symbols
+beta = 0.35; % RRC roll off factor
+
+%--- RRC Filter Design ---
+% It is built once but used at both the transmitter and receiver
+t_rrc = linspace(-span/2, span/2, span*samples_per_symbol);
+h_rrc = rrc_filter(t_rrc, beta);
+h_rrc = h_rrc(:);
+
+%% PHASE 1: TRANSMITTER
+
+% Generate random bits
+bits = randi([0,1], num_bits, 1);
+
+% Pair bits and map to QPSK symbols
+bit_pairs = reshape(bits, 2, num_bits/2).';
+symbols   = bit_pairs(:,1)*2 + bit_pairs(:,2);
+
+% Map symbols to I and Q directly 
+% 0 -> ( 1, 1)
+% 1 -> (-1, 1)  
+% 2 -> ( 1,-1)
+% 3 -> (-1,-1)
+I_symbols = 1 - 2*bit_pairs(:,1);   % bit=0 -> +1, bit=1 -> -1
+Q_symbols = 1 - 2*bit_pairs(:,2);   % bit=0 -> +1, bit=1 -> -1
+
+% Upsample
+I_up = kron(I_symbols, ones(samples_per_symbol, 1));
+Q_up = kron(Q_symbols, ones(samples_per_symbol, 1));
+
+% Pulse shape with RRC Filter
+I_shaped = conv(I_up, h_rrc, 'same');
+Q_shaped = conv(Q_up, h_rrc, 'same');
+
+% Create time vector and carriers
+N = length(I_up);
+t = (0:N-1).' / fs;
+carrier_cos = cos(2*pi*f_carrier*t);
+carrier_sin = sin(2*pi*f_carrier*t);
+
+% Modulate
+tx_wave = I_shaped.*carrier_cos - Q_shaped.*carrier_sin;
+
+% Plot transmitter
+figure;
+subplot(2,1,1);
+plot(t(1:100)*1e6, tx_wave(1:100), 'b');
+title('Transmitted Wave'); xlabel('Time (us)'); grid on;
+
+subplot(2,1,2);
+plot(I_symbols, Q_symbols, 'ro', 'MarkerFaceColor', 'r');
+axis([-2 2 -2 2]); grid on;
+title('Transmitted Constellation');
+xlabel('I'); ylabel('Q');
