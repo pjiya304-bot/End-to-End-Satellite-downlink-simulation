@@ -1,0 +1,36 @@
+%% PHASE 3: RECEIVER
+
+% Demodulate
+I_dem =  rx_wave .* carrier_cos;
+Q_dem = -rx_wave .* carrier_sin;
+
+% Matched RRC Filter
+I_matched = conv(I_dem, h_rrc, 'same');
+Q_matched = conv(Q_dem, h_rrc, 'same');
+
+sample_offset = floor(samples_per_symbol/2);
+I_filt = I_matched(sample_offset+1 : samples_per_symbol : end);
+Q_filt = Q_matched(sample_offset+1 : samples_per_symbol : end);
+
+% Decision — direct sign decision matches the simple mapping above
+% I positive -> bit1 = 0, I negative -> bit1 = 1
+% Q positive -> bit2 = 0, Q negative -> bit2 = 1
+recovered_bits = zeros(num_bits, 1);
+for m = 1:(num_bits/2)
+    recovered_bits((m-1)*2 + 1) = (I_filt(m) < 0);
+    recovered_bits((m-1)*2 + 2) = (Q_filt(m) < 0);
+end
+
+% Count errors
+num_errors    = sum(bits ~= recovered_bits);
+BER_simulated = num_errors / num_bits;
+
+% Plot received constellation
+figure;
+plot(I_filt, Q_filt, 'b.');
+hold on;
+plot([0 0], [-2 2], 'k--');
+plot([-2 2], [0 0], 'k--');
+axis([-2 2 -2 2]); grid on;
+title(sprintf('Received Constellation | Eb/N0=%.1f dB | BER=%.2f%%', Eb_N0_dB, BER_simulated*100));
+xlabel('I'); ylabel('Q');
