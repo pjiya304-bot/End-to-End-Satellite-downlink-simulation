@@ -1,0 +1,45 @@
+%% PHASE 2: CHANNEL
+
+% Link budget
+d_satellite        = 36000e3;
+c_speed            = 3e8;
+rain_loss_db       = 3.5;
+antenna_loss_db    = 1.5;
+tx_power_dBW       = 17;
+tx_antenna_gain_db = 30;
+rx_antenna_gain_db = 110;
+
+% Free space path loss
+fspl_db = 20*log10(4*pi*d_satellite*f_carrier/c_speed);
+
+% Total losses and total gains
+total_loss_db  = fspl_db + rain_loss_db + antenna_loss_db;
+total_gain_db  = tx_power_dBW + tx_antenna_gain_db + rx_antenna_gain_db;
+link_margin_db = total_gain_db - total_loss_db;
+
+% Fade the wave by path loss
+loss_factor = 10^(-total_loss_db/20);   % voltage factor
+faded_wave  = tx_wave * loss_factor;
+
+% Add noise based on link margin
+SNR_linear        = 10^(link_margin_db/10);
+signal_power      = mean(faded_wave.^2);
+noise_var         = signal_power / SNR_linear;
+noise             = sqrt(noise_var) * randn(N, 1);
+rx_wave           = faded_wave + noise;
+
+% Compute SNR and Eb/N0
+SNR_dB    = 10*log10(signal_power / noise_var);
+Eb_N0_dB  = SNR_dB - 10*log10(2);
+Eb_N0_lin = 10^(Eb_N0_dB/10);
+
+% Plot channel
+figure;
+subplot(2,1,1);
+plot(t(1:100)*1e6, faded_wave(1:100), 'k');
+title(sprintf('After %.1f dB Path Loss', total_loss_db)); grid on;
+
+subplot(2,1,2);
+plot(t(1:100)*1e6, rx_wave(1:100), 'r');
+title(sprintf('Received Signal + Noise | SNR=%.1f dB | Eb/N0=%.1f dB', SNR_dB, Eb_N0_dB));
+grid on;
