@@ -1,4 +1,4 @@
-# Satellite Downlink simulation
+# End-to-End Satellite Downlink simulation
 Simulation of an end-to-end satellite communication downlink - modeling propagation through vacuum and Earth's atmosphere, noise, attenuation and signal recovery at the receiver-built in GNU Octave as a foundational project ahead of a follow-up project introducing a jammer and adaptive filter.
 
 # Overview
