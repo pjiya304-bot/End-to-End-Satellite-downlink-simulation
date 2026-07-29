@@ -2,7 +2,7 @@
 Simulation of an end-to-end satellite communication downlink - modeling propagation through vacuum and Earth's atmosphere, noise, attenuation and signal recovery at the receiver-built in GNU Octave as a foundational project ahead of a follow-up project introducing a jammer and adaptive filter.
 
 # Overview
-This project models the full physics-layer chain of a satellite downlink: a transmitted QPSK signal travels through a simulated vacuum and atmospheric channel which is degraded by attenuation, noise and phase effects and is then reconstructed at the receiver. The goal is to demonstrate how a satellite link maintains signal integrity across a long, lossy and noisy channel.
+This project models the full physical-layer chain of a satellite downlink: a transmitted QPSK signal travels through a simulated vacuum and atmospheric channel which is degraded by attenuation, noise and phase effects and is then reconstructed at the receiver. The goal is to demonstrate how a satellite link maintains signal integrity across a long, lossy and noisy channel.
 
 # Setup
 **Tool used:** GNU Octave (MATLAB-compatible syntax), run via Octave Online
