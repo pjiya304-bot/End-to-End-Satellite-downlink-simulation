@@ -5,10 +5,10 @@ Simulation of an end-to-end satellite communication downlink - modeling propagat
 This project models the full physical-layer of a satellite downlink: a transmitted QPSK signal travels through a simulated vacuum and atmospheric channel which is degraded by attenuation, noise and phase effects and is then reconstructed at the receiver. The goal is to demonstrate how a satellite link maintains signal integrity across a long, lossy and noisy channel.
 
 # Setup
-**Tool used:** GNU Octave (MATLAB-compatible syntax), run via Octave Online
-**Modulation Scheme:** QPSK (Quadrature Phase Shift Keying) using I/Q signal representation
-**Pulse Shaping:** Root Raised Cosine (RRC) filter at the transmitter, to control bandwidth and inter-symbol interference (ISI)
-**Channel Model:** Free-space (vacuum) path loss, atmospheric attenuation, additive noise and phase effects introduced during propagation
+1. **Tool used:** GNU Octave (MATLAB-compatible syntax), run via Octave Online
+2. **Modulation Scheme:** QPSK (Quadrature Phase Shift Keying) using I/Q signal representation
+3. **Pulse Shaping:** Root Raised Cosine (RRC) filter at the transmitter, to control bandwidth and inter-symbol interference (ISI)
+4. **Channel Model:** Free-space (vacuum) path loss, atmospheric attenuation, additive noise and phase effects introduced during propagation
 
 # How It Works
 1. Data bits are mapped to QPSK symbols and represented as an I/Q signal.
