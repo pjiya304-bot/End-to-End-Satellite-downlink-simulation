@@ -14,7 +14,7 @@ This project models the full physical-layer of a satellite downlink: a transmitt
 1. Data bits are mapped to QPSK symbols and represented as an I/Q signal.
 2. the I/Q signal is pulse-shaped using an RRC filter to limit bandwidth and reduce ISI.
 3. The shaped signal passes through the simulated channel: vacuum path loss, atmospheric attenuation and additive noise are applied.
-4. At the receiver, a matched RRC filter is applied to the received signal, reversing the pulse shaping and minimising ISI.
+4. At the receiver, a matched RRC filter is applied to the received signal, reversing the pulse shaping and minimizing ISI.
 5. The filtered signal is demodulated back into the original transmitted bits.
 6. Constellation diagrams are plotted before and after the channel to visualize the degradation and recovery.
 
@@ -26,7 +26,13 @@ This project models the full physical-layer of a satellite downlink: a transmitt
 **Visualization:** Constellation diagram generation (transmitted vs received)
 
 ## Results
-The received constellation showed a clear degradation compared to the transmitted signal - the four QPSK clusters, tight and well-separated at the transmitter, appeared spread/rotated at the receiver due to channel noise and attenuation 
+**Link Budget** (geostationary distance = 36,000 Km, 10MHz carrier, 3.5 dB rain loss, 1.5 dB antenna loss):
+| Free-space path loss | 143.57 dB |
+| Total loss | 148.57 dB |
+| Total Margin | 157.00 dB |
+| Link Margin | 8.43 dB |
+| Resulting SNR | 8.43 dB |
+| Resulting Eb/N0 | 5.42 dB |
 
 # Future Improvements
 1. Extend this simulation with an active jammer and an adaptive LMS notch filter, to model interference and signal recovery under jamming(covered in a separate follow-up project)
