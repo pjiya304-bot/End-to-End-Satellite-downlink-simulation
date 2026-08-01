@@ -25,6 +25,9 @@ This project models the full physical-layer of a satellite downlink: a transmitt
 **Link Budget Analysis:** SNR calculation across the link to characterize signal quality
 **Visualization:** Constellation diagram generation (transmitted vs received)
 
+## Results
+The received constellation showed a clear degradation compared to the transmitted signal - the four QPSK clusters, tight and well-separated at the transmitter, appeared spread/rotated at the receiver due to channel noise and attenuation 
+
 # Future Improvements
 1. Extend this simulation with an active jammer and an adaptive LMS notch filter, to model interference and signal recovery under jamming(covered in a separate follow-up project)
 2. Different modulation scheme - extend beyond QPSK and compare performance/bandwidth trade-offs.
