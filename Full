@@ -11,7 +11,7 @@ beta = 0.35; % RRC roll off factor
 
 %--- RRC Filter Design ---
 % It is built once but used at both the transmitter and receiver
-t_rrc = linspace(-span/2, span/2, span*samples_per_symbol);
+t_rrc = (-span*samples_per_symbol/2: span*samples_per_symbol/2) / samples_per_symbol;
 h_rrc = rrc_filter(t_rrc, beta);
 h_rrc = h_rrc(:);
 
@@ -36,7 +36,7 @@ Q_symbols = 1 - 2*bit_pairs(:,2);   % bit=0 -> +1, bit=1 -> -1
 I_up = zeros(length(I_symbols)*samples_per_symbol, 1);
 Q_up = zeros(length(Q_symbols)*samples_per_symbol, 1);
 I_up(1:samples_per_symbol:end) = I_symbols;
-Q_up(1:samples_per_symbol:end) = Q_symbol;
+Q_up(1:samples_per_symbol:end) = Q_symbols;
 
 % Pulse shape with RRC Filter
 I_shaped = conv(I_up, h_rrc, 'same');
@@ -85,8 +85,11 @@ Prx_dBW = total_gain_db - total_loss_db;
 
 % The Hiss
 k = 1.38e-23;
-T_sys = 150;
-Rs = fs/Symbols_per_sample;
+T_sys_clear = 150;
+T_rain_phys = 275;
+T_rain = T_rain_phys * (1 - 10^(-rain_loss_db/10));
+T_sys = T_sys_clear + T_rain;
+Rs = fs/samples_per_symbol;
 Rb = 2*Rs;
 Eb_N0_dB = Prx_dBW - 10*log10(k*T_sys*Rb);
 Eb_N0_lin = 10^(Eb_N0_dB/10);
@@ -128,8 +131,8 @@ I_matched = conv(I_dem, h_rrc, 'same');
 Q_matched = conv(Q_dem, h_rrc, 'same');
 
 sample_offset = floor(samples_per_symbol/2);
-I_filt = I_matched(sample_offset+1 : samples_per_symbol : end);
-Q_filt = Q_matched(sample_offset+1 : samples_per_symbol : end);
+I_filt = I_matched(1 : samples_per_symbol : end);
+Q_filt = Q_matched(1 : samples_per_symbol : end);
 
 % Decision — direct sign decision matches the simple mapping above
 % I positive -> bit1 = 0, I negative -> bit1 = 1
@@ -141,8 +144,8 @@ for m = 1:(num_bits/2)
 end
 
 % Count errors
-num_errors    = sum(bits ~= recovered_bits);
-BER_simulated = num_errors / num_bits;
+num_errors    = sum(bits(7:end-6) ~= recovered_bits(7:end-6));
+BER_simulated = num_errors / (num_bits - 12);
 
 % Plot received constellation
 figure;
@@ -171,8 +174,8 @@ for idx = 1:length(Eb_N0_range_dB)
     bp = reshape(b, 2, 1000).';
     I_s = 1 - 2*bp(:,1);
     Q_s = 1 - 2*bp(:,2);
-    I_u = kron(I_s, ones(samples_per_symbol,1));
-    Q_u = kron(Q_s, ones(samples_per_symbol,1));
+    I_u = zeros(1000*samples_per_symbol, 1);    I_u(1 : samples_per_symbol : end) = I_s;
+    Q_u = zeros(1000*samples_per_symbol, 1);    Q_u(1 : samples_per_symbol : end) = Q_s;
     I_sh = conv(I_u, h_rrc, 'same');
     Q_sh = conv(Q_u, h_rrc, 'same');
     tt  = (0:length(I_u)-1).' / fs;
@@ -190,8 +193,8 @@ for idx = 1:length(Eb_N0_range_dB)
     
     Im = conv(Id, h_rrc, 'same');
     Qm = conv(Qd, h_rrc, 'same');
-    If = Im(sample_offset+1 : samples_per_symbol : end);
-    Qf = Qm(sample_offset+1 : samples_per_symbol : end);
+    If = Im(1 : samples_per_symbol : end);
+    Qf = Qm(1 : samples_per_symbol : end);
     
     rb = zeros(2000,1);
     for m = 1:1000
@@ -199,7 +202,7 @@ for idx = 1:length(Eb_N0_range_dB)
         rb((m-1)*2+2) = (Qf(m)<0);
     end
     
-    BER_sim(idx) = sum(b ~= rb) / 2000;
+    BER_sim(idx) = sum(b(7:end-6) ~= rb(7:end-6)) / (2000-12);
 end
 
 % Plot BER curve
@@ -220,12 +223,12 @@ fprintf('\n=== SATELLITE LINK RESULTS ===\n');
 fprintf('FSPL:            %.2f dB\n', fspl_db);
 fprintf('Total Loss:      %.2f dB\n', total_loss_db);
 fprintf('Total Gain:      %.2f dB\n', total_gain_db);
-fprintf('Link Margin:     %.2f dB\n', link_margin_db);
+fprintf('Link Margin:     %.2f dB\n', link_margin_dB);
 fprintf('SNR:             %.2f dB\n', SNR_dB);
 fprintf('Eb/N0:           %.2f dB\n', Eb_N0_dB);
-fprintf('Bits Sent:       %d\n', num_bits);
+fprintf('Bits Counted:    %d\n', num_bits - 12);
 fprintf('Errors:          %d\n', num_errors);
-fprintf('Simulated BER:   %.4f%%\n', BER_simulated*100);
-fprintf('Theoretical BER: %.4f%%\n', 0.5*erfc(sqrt(Eb_N0_lin))*100);
+fprintf('Simulated BER:   %.2e\n', BER_simulated);
+fprintf('Theoretical BER: %.2e\n', 0.5*erfc(sqrt(Eb_N0_lin)));
 fprintf('==============================\n');
 
