@@ -11,7 +11,7 @@ beta = 0.35; % RRC roll off factor
 
 %--- RRC Filter Design ---
 % It is built once but used at both the transmitter and receiver
-t_rrc = linspace(-span/2, span/2, span*samples_per_symbol);
+t_rrc = (-span*samples_per_symbol/2: span*samples_per_symbol/2) / samples_per_symbol;
 h_rrc = rrc_filter(t_rrc, beta);
 h_rrc = h_rrc(:);
 
@@ -33,8 +33,10 @@ I_symbols = 1 - 2*bit_pairs(:,1);   % bit=0 -> +1, bit=1 -> -1
 Q_symbols = 1 - 2*bit_pairs(:,2);   % bit=0 -> +1, bit=1 -> -1
 
 % Upsample
-I_up = kron(I_symbols, ones(samples_per_symbol, 1));
-Q_up = kron(Q_symbols, ones(samples_per_symbol, 1));
+I_up = zeros(length(I_symbols)*samples_per_symbol, 1);
+Q_up = zeros(length(Q_symbols)*samples_per_symbol, 1);
+I_up(1:samples_per_symbol:end) = I_symbols;
+Q_up(1:samples_per_symbol:end) = Q_symbols;
 
 % Pulse shape with RRC Filter
 I_shaped = conv(I_up, h_rrc, 'same');
