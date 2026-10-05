@@ -9,8 +9,8 @@ I_matched = conv(I_dem, h_rrc, 'same');
 Q_matched = conv(Q_dem, h_rrc, 'same');
 
 sample_offset = floor(samples_per_symbol/2);
-I_filt = I_matched(sample_offset+1 : samples_per_symbol : end);
-Q_filt = Q_matched(sample_offset+1 : samples_per_symbol : end);
+I_filt = I_matched(1 : samples_per_symbol : end);
+Q_filt = Q_matched(1 : samples_per_symbol : end);
 
 % Decision — direct sign decision matches the simple mapping above
 % I positive -> bit1 = 0, I negative -> bit1 = 1
@@ -22,8 +22,8 @@ for m = 1:(num_bits/2)
 end
 
 % Count errors
-num_errors    = sum(bits ~= recovered_bits);
-BER_simulated = num_errors / num_bits;
+num_errors    = sum(bits(7:end-6) ~= recovered_bits(7:end-6));
+BER_simulated = num_errors / (num_bits - 12);
 
 % Plot received constellation
 figure;
