@@ -33,8 +33,10 @@ I_symbols = 1 - 2*bit_pairs(:,1);   % bit=0 -> +1, bit=1 -> -1
 Q_symbols = 1 - 2*bit_pairs(:,2);   % bit=0 -> +1, bit=1 -> -1
 
 % Upsample
-I_up = kron(I_symbols, ones(samples_per_symbol, 1));
-Q_up = kron(Q_symbols, ones(samples_per_symbol, 1));
+I_up = zeros(length(I_symbols)*samples_per_symbol, 1);
+Q_up = zeros(length(Q_symbols)*samples_per_symbol, 1);
+I_up(1:samples_per_symbol:end) = I_symbols;
+Q_up(1:samples_per_symbol:end) = Q_symbol;
 
 % Pulse shape with RRC Filter
 I_shaped = conv(I_up, h_rrc, 'same');
@@ -179,7 +181,7 @@ for idx = 1:length(Eb_N0_range_dB)
     tx  = I_sh.*cc - Q_sh.*ss;
     
     sp    = mean(tx.^2);
-    nv    = sp / (en*2);
+    nv    = sp *fs / (2*(2*fs/samples_per_symbol)*en);
     nn    = sqrt(nv)*randn(size(tx));
     rx    = tx + nn;
     
