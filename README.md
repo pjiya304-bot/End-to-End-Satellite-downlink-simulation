@@ -11,7 +11,7 @@
     <img src="https://img.shields.io/badge/modulation-QPSK-blueviolet"alt="QPSK">
   <img src="https://img.shields.io/badge/band-Ku%2012%20GHz-orange"alt="Ku-band">
   <img src="https://img.shields.io/badge/orbit-GEO-informational"alt="GEO">
-  <img src="https//img.shields.io/badge/license-MIT-green"alt="MIT"></p><p align="centre">
+  <img src="https//img.shields.io/badge/license-MIT-green"alt="MIT">
   </p>
 
   <p align="centre">
