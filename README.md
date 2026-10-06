@@ -7,11 +7,10 @@
 </p> 
 
 <p align="centre">
-  <img src="https://img.shields.io/badge/GNU%20Octave-simulation-0790C0?
-    <img src="https://img.shields.io/badge/modulation-QPSK-blueviolet"alt="QPSK">
-  <img src="https://img.shields.io/badge/band-Ku%2012%20GHz-orange"alt="Ku-band">
-  <img src="https://img.shields.io/badge/orbit-GEO-informational"alt="GEO">
-  <img src="https//img.shields.io/badge/license-MIT-green"alt="MIT">
+  <img src="https://img.shields.io/badge/Modulation-QPSK-blueviolet"alt="QPSK">
+  <img src="https://img.shields.io/badge/Band-Ku%2012%20GHz-orange"alt="Ku-band">
+  <img src="https://img.shields.io/badge/Orbit-GEO-informational"alt="GEO">
+  <img src="https://img.shields.io/badge/license-MIT-green"alt="MIT">
   </p>
 
   <p align="centre">
