@@ -15,7 +15,7 @@
   </p>
 
   
-  ![Final Curve](media/Final_curve.png)
+  ![Final Curve](media/Final_Curve.png)
   <i>Simulated QPSK BER (red) trackes theory (blue).
   Dashed line: the link's operating point.</i>
   </p>
