@@ -1,26 +1,21 @@
-<h1 align="centre">
-  End-to-End Satellite Downlink Simulation
-</h1>
+# End-to-End Satellite Downlink Simulation
+**Follow a signal 3,.000 km down from orbit and measure exactly what distance and weather do to it.**
 
-<p align="centre">
-<b>Following a signal 36,000 km down from orbit and measuring exactly what the atmosphere and distance does to it.</b>
-</p> 
+![QPSK](https://img.shields.io/badge/modulation-QPSK-blue)
 
-<p align="centre">
-  <img src="https://img.shields.io/badge/Simulation-Octave-0790C0">
-  <img src="https://img.shields.io/badge/Modulation-QPSK-blueviolet"alt="QPSK">
-  <img src="https://img.shields.io/badge/Band-Ku%2012%20GHz-orange"alt="Ku-band">
-  <img src="https://img.shields.io/badge/Orbit-GEO-informational"alt="GEO">
-  <img src="https://img.shields.io/badge/license-MIT-green"alt="MIT">
-  </p>
+![Band](https://img.shields.io/badge/band-Ku-orange)
+
+![Orbit](https://img.shields.io/badge/orbit-GEO-lightgrey)
+
+![Octave](https://img.shields.io/badge/built%20with-GNU%20Octave-green)
+
+![License](https://img.shields.io/badge/license-MIT-brightgreen)
 
 ---
 
 ## The story in 30 seconds
-A geostationary satellite is about 36,000 km away. By the time its signal reaches the ground it has lost more than 200 dB of power and the receiver must still recover every bit from a signal far weaker than the noise around it.
-This project simulates that whole journey at the physical layer, from random bits to recovered bits, and lets the **link budget drive the channel**. Noise is not a number picked by hand. It comes from the system noise temperature, including the extra noise that rain adds.
-
-<div align="centre">
+A geostationary satellite sits about 36,000 km above the equator. By the time its signal reaches your dish, it has lost more than **200 dB** of power. The receiver still has to recover every bit from a signal that is far weaker than the noise around it.
+This project simulates that whole journey at the physical layer, from random bits to recovered bits. The key design choice: **the link budget drives the channel.** Noise is not a number picked by hand. It is calculated from the system noise temperature and the transmit power, distance and antenna gains.
 
 | 47 dBW | 205.15 dB | 14.18 dB | -1.96 dB |
 |:---:|:---:|:---:|:---:|
