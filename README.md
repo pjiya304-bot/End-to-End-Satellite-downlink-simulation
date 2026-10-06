@@ -14,7 +14,7 @@
   </p>
 
   <p align="centre">
-  <img src="docs/figures/ber_curve.png" width="720"
+  <img src="docs/figures/Final_curve.png" width="720"
   alt="Simulated vs Theoretical QPSK BER">
   <br>
   <i>Simulated QPSK BER (red) trackes theory (blue).
