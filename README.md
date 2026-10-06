@@ -14,10 +14,8 @@
   <img src="https://img.shields.io/badge/license-MIT-green"alt="MIT">
   </p>
 
-  <p align="centre">
+  
   ![Final Curve](media/Final_curve.png)
-  alt="Simulated vs Theoretical QPSK BER">
-  <br>
   <i>Simulated QPSK BER (red) trackes theory (blue).
   Dashed line: the link's operating point.</i>
   </p>
