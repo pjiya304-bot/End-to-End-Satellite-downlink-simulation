@@ -178,7 +178,7 @@ Built one stage at a time, each tested before the next:
 
 ## Quick Start
 
-Needs GNU Octave or [Octave Online](https://octave-online,net).
+Needs GNU Octave or [Octave Online](https://octave-online.net).
 
 ```bash
 git clone https://github.com/<pjiya304-bot>/<End-to-End-Satellite-downlink-simulation>.git
