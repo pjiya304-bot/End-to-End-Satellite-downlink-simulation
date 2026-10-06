@@ -7,7 +7,7 @@
 </p> 
 
 <p align="centre">
-  <img src="https://img.shields.io/badge/Octave-simulation-0790C0">
+  <img src="https://img.shields.io/badge/Simulation-Octave-0790C0">
   <img src="https://img.shields.io/badge/Modulation-QPSK-blueviolet"alt="QPSK">
   <img src="https://img.shields.io/badge/Band-Ku%2012%20GHz-orange"alt="Ku-band">
   <img src="https://img.shields.io/badge/Orbit-GEO-informational"alt="GEO">
@@ -15,7 +15,7 @@
   </p>
 
   <p align="centre">
-  <img src="media/Final curve.png" width="720"
+  <img src="media/Final_curve.png" width="720"
   alt="Simulated vs Theoretical QPSK BER">
   <br>
   <i>Simulated QPSK BER (red) trackes theory (blue).
