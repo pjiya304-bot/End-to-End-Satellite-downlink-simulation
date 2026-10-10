@@ -30,7 +30,7 @@ This project simulates that whole journey at the physical layer, from random bit
 |---|---|
 | EIRP | 47 dBW |
 | Free-space path loss | 205.15 dB |
-| Pointing and Miscellaneous losses | 15 dB |
+| Pointing and Miscellaneous losses | 1.5 dB |
 | Total loss | 206.65 dB |
 | Received antenna gain | 40 dBi |
 | Received power | -119.65 dBW (about 1pW) |
