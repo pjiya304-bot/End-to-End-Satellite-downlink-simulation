@@ -14,27 +14,31 @@
 ---
 
 ## The story in 30 seconds
-A geostationary satellite sits about 36,000 km above the equator. By the time its signal reaches your dish, it has lost more than **200 dB** of power. The receiver still has to recover every bit from a signal that is far weaker than the noise around it.
+A geostationary satellite sits about 36,000 km above the equator. By the time its signal reaches the ground, it has lost more than **200 dB** of power and arrives at roughly a picowatt. The receiver still has to recover every bit from that faint signal.
 This project simulates that whole journey at the physical layer, from random bits to recovered bits. The key design choice: **the link budget drives the channel.** Noise is not a number picked by hand. It is calculated from the system noise temperature and the transmit power, distance and antenna gains.
 
-| 47 dBW | 205.15 dB | 14.18 dB | -1.96 dB |
+| 47 dBW | 205.15 dB | 14.18 dB | +4.58 dB |
 |:---:|:---:|:---:|:---:|
-| EIRP | Path Loss | Clear-sky Eb/N0 | Margin in rain |
+| EIRP | Path Loss | Clear-sky Eb/N0 | Link Margin |
 
 </div>
 
 ---
 
 ### Key results
-| Metric | Clear sky | Rain (3.5 dB) |
-|---|---|--|
-| Total loss | 206.65 dB | 210.15 dB |
-| System noise temperature | 150 K | ~302 K |
-| **Eb/N0** | **14.18 dB** | **7.64 dB** |
-| Margin vs 9.6 dB | **+4.58 dB** | **-1.96 dB** |
-| Theoretical BER | 2.33e-13 | 3.28e-04 |
-
-Rain costs **6.54 dB** in total: 3.5 dB of signal attenuation plus about 3 dB from added noise. The link meets its target up to roughly **2.2 dB** of rain fade.
+| Metric | Value | 
+|---|---|
+| EIRP | 47 dBW |
+| Free-space path loss | 205.15 dB |
+| Pointing and Miscellaneous losses | 15 dB |
+| Total loss | 206.65 dB |
+| Received antenna gain | 40 dBi |
+| Received power | -119.65 dBW (about 1pW) |
+| System noise temperature | 150 K |
+| Eb/N0 | 14.18 dB |
+| Required Eb/N0 (uncoded QPSK, BER 1e-5) | 9.6 dB |
+| Link margin | +4.58 dB |
+| Theoretical BER | 2.33e-13 |
 
 ### Weather scenerioes
 
