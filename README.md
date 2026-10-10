@@ -1,5 +1,5 @@
 # End-to-End Satellite Downlink Simulation
-**Follow a signal 3,.000 km down from orbit and measure exactly what distance and weather do to it.**
+**Follow a signal 36,000 km down from orbit and measure exactly what distance and weather do to it.**
 
 ![QPSK](https://img.shields.io/badge/modulation-QPSK-blue)
 
