@@ -68,7 +68,7 @@ xlabel('I'); ylabel('Q');
 % Link budget
 d_satellite        = 36000e3;
 c_speed            = 3e8;
-rain_loss_db       = 3.5;
+rain_loss_db       = 0;
 antenna_loss_db    = 1.5;
 tx_power_dBW       = 17;
 tx_antenna_gain_db = 30;
