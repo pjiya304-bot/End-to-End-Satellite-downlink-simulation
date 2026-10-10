@@ -84,10 +84,10 @@ I --> J
 5. **Score:** Errors are counted, skipping the first and last 3 symbols where the filter has not settled.
 
 ## Link Budget
-> EIRP = P_tx + G_tx = 17 dBW + 30 dBi = 47 dBW
-> FSPL = 20*log10(4*pi*d*f / c) = 205.15 dB (d = 36,000 km, f = 12 GHz)
-> P_rx = EIRP - FSPL - L_misc +G_rx = -119.65 dBW
-> EB/N0 = P_rx - 10*log10(k * T_sys * Rb)
+> 1. EIRP = P_tx + G_tx = 17 dBW + 30 dBi = 47 dBW
+> 2. FSPL = 20*log10(4*pi*d*f / c) = 205.15 dB (d = 36,000 km, f = 12 GHz)
+> 3. P_rx = EIRP - FSPL - L_misc +G_rx = -119.65 dBW
+> 4. EB/N0 = P_rx - 10*log10(k * T_sys * Rb)
 
 **EIRP** (effective isotropic radiated power) is transmit power plus transmit antenna gain. It is the power an ideal antenna radiating equally in all directions would need ot match the satellite's signal in the direction of its main beam.
 
