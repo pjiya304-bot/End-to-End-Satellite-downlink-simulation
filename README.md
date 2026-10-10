@@ -184,14 +184,14 @@ Built one stage at a time, each tested before the next:
 Needs GNU Octave or [Octave Online](https://octave-online.net).
 
 ```bash
-git clone https://github.com/<pjiya304-bot>/<End-to-End-Satellite-downlink-simulation>.git
+git clone https://github.com/pjiya304-bot/End-to-End-Satellite-downlink-simulation.git
 cd End-to-End-Satellite-downlink-simulation
 ```
 
 Run the scripts in `src/` in order: transmitter, channel, receiver, BER curve. Change the weather with one line:
 
 ```matlab
-rain_loss_db = 3.5;   % 0 clear, 105 light, 3.5 moderate, 5 heavy
+rain_loss_db = 3.5;   % 0 clear, 1.5 light, 3.5 moderate, 5 heavy
 ```
 
 Set `num_bits = 100000` for a measurable BER at 3.5 dB.
