@@ -40,17 +40,6 @@ This project simulates that whole journey at the physical layer, from random bit
 | Link margin | +4.58 dB |
 | Theoretical BER | 2.33e-13 |
 
-### Weather scenerioes
-
-| Rain | Condition | Eb/N0 | Margin | Theory BER | Sim BER |
-|---|---|---|---|---|---|
-| 0db | Clear | 14.18 | +4.58 | 2.33e-13 | n/a |
-| 1.5 dB | Light | 10.82 | +1.22 | TBD | TBD |
-| 3.5 dB | Moderate | 7.64 | -1.96 | 3.28e-04 | TBD |
-| 5.0 dB | Heavy | 5.65 | -3.95 | TBD | TBD |
-
-> Eb/N0 and margin are in dB. BERs below about 1e-5 cannot be measured by direct simulation in reasonable time, so they are reported from theory only.
-
 ---
 
 ## Architecture
@@ -68,7 +57,7 @@ end
 subgraph CH["Channel"]
 F[Path loss<br/>205.15 dB]
 G[Rain<br/>0 to 5 dB]
-H[Antenna loss<br/>1.5 dB]
+H[Pointing and miscellaneous <br/>loss 1.5 dB]
 I[AWGN from<br/>link budget]
 F --> G --> H --> I
 end
@@ -94,14 +83,27 @@ I --> J
 4. **Recover:** The receiver demodulates, applies the matched RRC filter, samples once per symbol and decides by sign.
 5. **Score:** Errors are counted, skipping the first and last 3 symbols where the filter has not settled.
 
-**Noise Model**
+## Link Budget
+> EIRP = P_tx + G_tx = 17 dBW + 30 dBi = 47 dBW
+> FSPL = 20*log10(4*pi*d*f / c) = 205.15 dB (d = 36,000 km, f = 12 GHz)
+> P_rx = EIRP - FSPL - L_misc +G_rx = -119.65 dBW
+> EB/N0 = P_rx - 10*log10(k * T_sys * Rb)
 
-```
-Eb/N0 = Prx - 10*log10(k * T_sys * Rb)
-T_sys = 150 K + 275 K * (1 - 10^(-A_rain / 10))
-```
+**EIRP** (effective isotropic radiated power) is transmit power plus transmit antenna gain. It is the power an ideal antenna radiating equally in all directions would need ot match the satellite's signal in the direction of its main beam.
 
-Rain both weakens the signal and raises the noise floor, so a budget that only subtracts rain loss underestimates the damage.
+## Weather Sensitivity
+Extra fade does two things: it weakens the signal and it raises the receiver's noise floor, so a budget that only subtracts the fade underestimates the damage.
+
+T_sys = 150 K + 275 K * (1-10^(-A_fade / 10))
+
+| Fade | Condition | Eb/N0 | Margin | Theory BER | Sim BER |
+|---|---|---|---|---|---|
+| 0 dB | Clear | 14.18 | +4.58 | 2.33e-13 | n/a |
+| 1.5 dB | Light | 10.82 | +1.22 | ~4.5e-07 | n/a |
+| 3.5 dB | Moderate | 7.64 | -1.96 | 3.28e-04 | TBD |
+| 5.0 dB | Heavy | 5.65 | -3.95 | ~3.4e-03 | TBD |
+
+The link meets its target up to roughly 2.2 dB of fade. Eb/N0 and margin are in dB. BERs below about 1e-5 cannot be measured by direct simulation in reasonable time, so they are reported from theory only.
 
 ---
 
@@ -116,7 +118,8 @@ Rain both weakens the signal and raises the noise floor, so a budget that only s
 | Distance | 36,000 km (GEO) |
 | EIRP | 47 dBW (17 dBW + 30 dBi) |
 | Receive Gain | 40 dBi |
-| Antenna / pointing loss | 1.5 dB |
+| Pointing and misc. loss(including atmospheric gases) | 1.5 dB |
+| Weather fade scenarios | 0 to 5 dB |
 | Required Eb/N0 | 9.6 dB (uncoded QPSK, BER 1e-5) |
 
 ---
@@ -138,7 +141,7 @@ Built one stage at a time, each tested before the next:
 
 1. **Theory first:** QPSK, I/Q, constellations, SNR, link budgets, pulse shaping, matched filtering, ISI and RRC design.
 2. **Transmitter, channel, receiver**, then a BER sweep against theory.
-3. **Realism pass:** 12GHz budget, 40 dBi antenna, noise from system temperature, and finally rain-induced sky noise.
+3. **Realism pass:** 12GHz budget, 40 dBi antenna, noise from system temperature, and finally sky noise.
 4. **Debugging against theory.** Real bugs found and fixed:
    - the receiver sampled between symbols, not at the filter peak
    - the RRC filter had uneven tap spacing that shifted its peak
@@ -146,7 +149,7 @@ Built one stage at a time, each tested before the next:
    - filter edge effects inflated the error count
    - typos and missing semicolons that stopped the script
 
-**Tools:** GNU Via Octave Online, no toolboxes. Theory uses `erfc` instead of `qfunc`,  so no communication package is needed.
+**Tools:** GNU Octave (via Octave Online), no toolboxes. Theory uses `erfc` instead of `qfunc`,  so no communication package is needed.
 
 </details>
 
@@ -158,7 +161,8 @@ Built one stage at a time, each tested before the next:
 |---|---|
 | Perfect carrier and timing sync | Costas loop / PLL, timing recovery |
 | Uncoded QPSK | LDPC/BCH or convolution coding |
-| Fixed 36,000 km | Could be more |
+| Fixed 36,000 km | Slant range varies with ground-station location | |
+| Gas absorption folded into the fixed 105 dB loss | Separate oxygen and water vapour loss |
 | Linear amplifier | Non linear TWTA with back-off |
 </details>
 
@@ -168,7 +172,7 @@ Built one stage at a time, each tested before the next:
 
 - [ ] Carrier phase/frequency offset with Costas-loop recovery
 - [ ] Forward error correction and coded-BER comparison
-- [ ] Rain sweep: Eb/N0 vs rain attenuation
+- [ ] Fade sweep: Eb/N0 vs attenuation
 - [ ] Link-margin recovery study (dish size, power, coding)
 - [ ] 8-PSK / 16-QAM comparison, PSD, eye diagram, EVM
 - [ ] Python port with an ML modulation/noise classifer
@@ -181,6 +185,7 @@ Needs GNU Octave or [Octave Online](https://octave-online.net).
 
 ```bash
 git clone https://github.com/<pjiya304-bot>/<End-to-End-Satellite-downlink-simulation>.git
+cd End-to-End-Satellite-downlink-simulation
 ```
 
 Run the scripts in `src/` in order: transmitter, channel, receiver, BER curve. Change the weather with one line:
