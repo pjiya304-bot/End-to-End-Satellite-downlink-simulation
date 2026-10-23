@@ -25,9 +25,9 @@ bit_pairs = reshape(bits, 2, num_bits/2).';
 symbols   = bit_pairs(:,1)*2 + bit_pairs(:,2);
 
 % Map symbols to I and Q directly 
-% 0 -> ( 1, 1)
-% 1 -> (-1, 1)  
-% 2 -> ( 1,-1)
+% 0 -> ( +1, +1)
+% 1 -> (+1, -1)  
+% 2 -> (-1,+1)
 % 3 -> (-1,-1)
 I_symbols = 1 - 2*bit_pairs(:,1);   % bit=0 -> +1, bit=1 -> -1
 Q_symbols = 1 - 2*bit_pairs(:,2);   % bit=0 -> +1, bit=1 -> -1
