@@ -96,18 +96,29 @@ Eb_N0_lin = 10^(Eb_N0_dB/10);
 link_margin_dB = Eb_N0_dB - 9.6;
 
 
-% Fade the wave by path loss
-loss_factor = 10^(-total_loss_db/20);   % voltage factor
-faded_wave  = tx_wave * loss_factor;
+% --- Signal: scale unit-power waveform to the received power from the budget
+P_rx_W     = 10^(prx_dBW/10);                     % received power in watts
+tx_unit    = tx_wave / sqrt(mean(tx_wave.^2));    % normalise to unit power
+faded_wave = tx_unit * sqrt(P_rx_W * impedance);  % volta across 50 ohm
 
-% Add noise based on link margin
-signal_power      = mean(faded_wave.^2);
-noise_var         = signal_power * fs / (2 * Rb * Eb_N0_lin) ;
-noise             = sqrt(noise_var) * randn(N, 1);
-rx_wave           = faded_wave + noise;
+% --- Noise: thermal noise from kTB over the simulated bandwidth
+B_sim     = fs/2;
+noise_var = k * T_sys * B_sim * impedance;
+noise     = sqrt(noise_var) * randn(N, 1);
+rx_wave   = faded_wave + noise;
 
-% Compute SNR and Eb/N0
-SNR_dB    = 10*log10(signal_power / noise_var);
+% --- MEasured values from the actual waveforms
+Ps_meas = mean(faded_wave .^2) / impedance;
+Pn_meas = mean(noise .^2) / impedance;
+N0_meas = Pn_meas / B_sim;
+Eb_N0_meas_lin = (Ps_meas / Rb) / N0_meas;
+Eb_N0_meas_dB = 10*log10(Eb_N0_meas_lin);
+Eb_N0_meas_dB = Eb_N0_meas_dB + 10*log10(2);
+CN0_dBHz = 10*log10(Ps_meas / N0_meas);
+SNR_dB = 10*log10(Ps_meas / Pn_meas);
+
+fprintf('Budget Eb/N0: %.2f dB\n', Eb_N0_dB);
+fprintf('Measured Eb/N0: %.2f dB\n', Eb_N0_meas_dB);
 
 % Plot channel
 figure;
@@ -134,6 +145,10 @@ sample_offset = floor(samples_per_symbol/2);
 I_filt = I_matched(1 : samples_per_symbol : end);
 Q_filt = Q_matched(1 : samples_per_symbol : end);
 
+scale = mean(abs([I_filt; Q_filt]))
+I_filt = I_filt / scale;
+Q_filt = Q_filt / scale;
+
 % Decision — direct sign decision matches the simple mapping above
 % I positive -> bit1 = 0, I negative -> bit1 = 1
 % Q positive -> bit2 = 0, Q negative -> bit2 = 1
@@ -154,70 +169,85 @@ hold on;
 plot([0 0], [-2 2], 'k--');
 plot([-2 2], [0 0], 'k--');
 axis([-2 2 -2 2]); grid on;
-title(sprintf('Received Constellation | Eb/N0=%.1f dB | BER=%.2f%%', Eb_N0_dB, BER_simulated*100));
+title(sprintf('Received Constellation | Eb/N0=%.1f dB | BER=%.2f%%', Eb_N0_meas_dB, BER_simulated*100));
 xlabel('I'); ylabel('Q');
 
 %% PHASE 4: BER CURVE
 
-Eb_N0_range_dB = 0:2:14;
-BER_theory     = zeros(size(Eb_N0_range_dB));
-BER_sim        = zeros(size(Eb_N0_range_dB));
+Eb_N0_range_dB = 0:1:8;
+BER_sim     = nan(size9Eb_N0_range_dB));
+target_errros = 100;
+chunk_bits = 20000;
+max_bits = 2e6;
 
 for idx = 1:length(Eb_N0_range_dB)
     en = 10^(Eb_N0_range_dB(idx)/10);
-    
-    % Theory
-    BER_theory(idx) = 0.5*erfc(sqrt(en));
-    
-    % Simulation
-    b = randi([0,1], 2000, 1);
-    bp = reshape(b, 2, 1000).';
-    I_s = 1 - 2*bp(:,1);
-    Q_s = 1 - 2*bp(:,2);
-    I_u = zeros(1000*samples_per_symbol, 1);    I_u(1 : samples_per_symbol : end) = I_s;
-    Q_u = zeros(1000*samples_per_symbol, 1);    Q_u(1 : samples_per_symbol : end) = Q_s;
-    I_sh = conv(I_u, h_rrc, 'same');
-    Q_sh = conv(Q_u, h_rrc, 'same');
-    tt  = (0:length(I_u)-1).' / fs;
-    cc  = cos(2*pi*f_carrier*tt);
-    ss  = sin(2*pi*f_carrier*tt);
-    tx  = I_sh.*cc - Q_sh.*ss;
-    
-    sp    = mean(tx.^2);
-    nv    = sp *fs / (2*(2*fs/samples_per_symbol)*en);
-    nn    = sqrt(nv)*randn(size(tx));
-    rx    = tx + nn;
-    
-    Id =  rx.*cc;
-    Qd = -rx.*ss;
-    
-    Im = conv(Id, h_rrc, 'same');
-    Qm = conv(Qd, h_rrc, 'same');
-    If = Im(1 : samples_per_symbol : end);
-    Qf = Qm(1 : samples_per_symbol : end);
-    
-    rb = zeros(2000,1);
-    for m = 1:1000
-        rb((m-1)*2+1) = (If(m)<0);
-        rb((m-1)*2+2) = (Qf(m)<0);
-    end
-    
-    BER_sim(idx) = sum(b(7:end-6) ~= rb(7:end-6)) / (2000-12);
+    total_errors = 0;
+    total_bits = 0;
+
+while total_errors < target_errors && total_bits < max_bits
+nsym = chunk_bits/2;
+
+b = randi([0,1], chunk_bits, 1);
+bp = reshape(b, 2, nsym);
+I_s = 1 - 2*bp(:,1);
+Q_s = 1 - 2*bp(:,2);
+
+I_u = zeros(nysm*samples_per_symbol, 1);  I_u(1:samples_per_symbol:end)
+Q_u = zeros(nysm*samples_per_symbol, 1);  Q_u(1:samples_per_symbol:end)
+I_sh = conv(I_u, h_rrc, 'same');
+Q_sh = conv(Q_u, h_rcc, 'same');
+
+tt = (0:length(I_u)-1).' / fs;
+cc = cos(2*pi*f_carrier*tt);
+ss = sin(2*pi*f_carrier*tt);
+tx = I_sh.*cc - Q_sh.*ss;
+
+% Noise set from the Eb/N0 being swept
+sp = mean(tx.^2);
+nv = sp * fs / (2 * Rb * en);
+rx = tx + sqrt(nv)*randn(size(tx));
+
+Id = rx.*cc;
+Qd = -rx.*ss;
+Im = conv(Id, h_rrc, 'same');
+Qm = conv(Qd, h_rrc, 'same');
+If = Im(1:samples_per_symbol:end);
+Qf = Qm(1:samples_per_symbol:end);
+
+rb = zeros(chunk_bits, 1);
+rb(1:2:end) = (If < 0);
+rb(2:2:end) = (Qf < 0);
+
+% Ignore first and last 6 bits (filter edge effects)
+total_errors = total_errors + sum(b(7:end-6) ~= rb(7:end-6));
+total_bits = total_bits + (chunk_bits - 12);
 end
 
-% Plot BER curve
+if total_erros > 0
+    BER_sim(idx) = total_errors / total_bits;
+ end
+end
+
+% Theory on a fine grid, extended to cover the operating point
+EbN0_fine = 0:0.25:15;
+BER_theory = 0.5*erfc(sqrt(10.^(EbN0_fine/10)));
+BER_op = 0.5*erfc(sqrt(Eb_N0_meas_lin));
+
 figure;
-semilogy(Eb_N0_range_dB, BER_theory, 'b-', 'LineWidth', 2);
+semilogy(EbN0_fine, BER_theory, 'b-', 'LineWidth', 2);
 hold on;
-semilogy(Eb_N0_range_dB, max(BER_sim, 1e-4), 'ro--');
-plot([Eb_N0_dB Eb_N0_dB], [1e-4 1], 'k--');
+semilogy(Eb_No_range_dB, BER_sim, 'ro', 'MarkerFaceColor', 'r');
+semilogy(Eb_N0_meas_dB, BER_op, 'ks', 'MarkerFaceColor', 'g', MarkerSize', 10);
 grid on;
 xlabel('Eb/N0 (dB)');
 ylabel('BER');
-title('BER vs Eb/N0 — QPSK Simulation vs Theory');
-legend('Theory', 'Simulation', 'Operating Point');
-ylim([1e-4 1]);
-
+title('BER vs Eb/N0; QPSK Simulation vs Theory');
+legend('Theory', 'Simulation (>=100 errors/point)', ...
+    sprintf('Link operating point (theory BER = %.1e)', BER_op), ...
+    'Location', 'southwest');
+ylim([1e-9 1]);
+   
 %% RESULTS
 fprintf('\n=== SATELLITE LINK RESULTS ===\n');
 fprintf('FSPL:            %.2f dB\n', fspl_db);
@@ -225,10 +255,10 @@ fprintf('Total Loss:      %.2f dB\n', total_loss_db);
 fprintf('Total Gain:      %.2f dB\n', total_gain_db);
 fprintf('Link Margin:     %.2f dB\n', link_margin_dB);
 fprintf('SNR:             %.2f dB\n', SNR_dB);
-fprintf('Eb/N0:           %.2f dB\n', Eb_N0_dB);
+fprintf('Eb/N0:           %.2f dB\n', Eb_N0_meas_dB);
 fprintf('Bits Counted:    %d\n', num_bits - 12);
 fprintf('Errors:          %d\n', num_errors);
-fprintf('Simulated BER:   %.2e\n', BER_simulated);
-fprintf('Theoretical BER: %.2e\n', 0.5*erfc(sqrt(Eb_N0_lin)));
+fprintf('Simulated BER:   %.2e (0 error is expected at this Eb/N0)\n', BER_simulated);
+fprintf('Theoretical BER: %.2e\n', 0.5*erfc(sqrt(10^(Eb_N0_meas_dB/10)));
 fprintf('==============================\n');
 
