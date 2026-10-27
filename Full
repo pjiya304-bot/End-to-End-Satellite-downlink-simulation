@@ -25,7 +25,6 @@ bits = randi([0,1], num_bits, 1);
 
 % Pair bits and map to QPSK symbols
 bit_pairs = reshape(bits, 2, num_bits/2).';
-symbols   = bit_pairs(:,1)*2 + bit_pairs(:,2);
 
 % Map symbols to I and Q directly 
 % 0 -> ( +1, +1)
@@ -91,12 +90,12 @@ pointing_loss_dB = 0.5;
 pol_loss_dB = 0.3;
 impl_loss_dB = 1.5;
 fspl_dB = 20*log10(4*pi*d_satellite*f_rf/c_speed);
-total_loss_dB = fspl_dB + rain_loss dB + gas_loss_dB + pointing_loss_dB + pol_loss_dB;
+total_loss_dB = fspl_dB + rain_loss_dB + gas_loss_dB + pointing_loss_dB + pol_loss_dB;
 total_gain_dB = EIRP_dBW +rx_antenna_gain_dB;
 Prx_dBW = total_gain_dB - total_loss_dB;
 
 % Noise
-k = 1.38e - 23;
+k = 1.38e-23;
 T_sys_clear = 150;
 T_rain_phys = 275;
 T_rain = T_rain_phys * (1 - 10^(-rain_loss_dB/10));
@@ -114,9 +113,9 @@ link_margin_dB = Eb_N0_dB - impl_loss_dB - required_EbN0_dB;
 
 
 % --- Signal: scale unit-power waveform to the received power from the budget
-P_rx_W     = 10^(prx_dBW/10);                     % received power in watts
+P_rx_W     = 10^(Prx_dBW/10);                     % received power in watts
 tx_unit    = tx_wave / sqrt(mean(tx_wave.^2));    % normalise to unit power
-faded_wave = tx_unit * sqrt(P_rx_W * impedance);  % volta across 50 ohm
+faded_wave = tx_unit * sqrt(P_rx_W * impedance);  % volt across 50 ohm
 
 % --- Noise: thermal noise from kTB over the simulated bandwidth
 B_sim     = fs/2;
@@ -130,7 +129,7 @@ Pn_meas = mean(noise .^2) / impedance;
 N0_meas = Pn_meas / B_sim;
 Eb_N0_meas_lin = (Ps_meas / Rb) / N0_meas;
 Eb_N0_meas_dB = 10*log10(Eb_N0_meas_lin);
-Eb_N0_meas_dB = Eb_N0_meas_dB + 10*log10(2);
+Eb_N0_meas_dB = Es_N0_meas_dB + 10*log10(2);
 CN0_dBHz = 10*log10(Ps_meas / N0_meas);
 SNR_dB = 10*log10(Ps_meas / Pn_meas);
 
@@ -141,11 +140,11 @@ fprintf('Measured Eb/N0: %.2f dB\n', Eb_N0_meas_dB);
 figure;
 subplot(2,1,1);
 plot(t(1:100)*1e6, faded_wave(1:100), 'k');
-title(sprintf('After %.1f dB Path Loss', total_loss_db)); grid on;
+title(sprintf('After %.1f dB Path Loss', total_loss_dB)); grid on;
 
 subplot(2,1,2);
 plot(t(1:100)*1e6, rx_wave(1:100), 'r');
-title(sprintf('Received Signal + Noise | SNR=%.1f dB | Eb/N0=%.1f dB', SNR_dB, Eb_N0_dB));
+title(sprintf('Received Signal + Noise | SNR=%.1f dB | Eb/N0=%.1f dB', SNR_dB, Eb_N0_meas_dB));
 grid on;
 
 %% PHASE 3: RECEIVER
@@ -172,9 +171,9 @@ alpha = 0.10;
 beta_1 = 0.005;
 ph = 0;  fr = 0;
 nsym = length(z);
-y = zeros(nysm, 1);
-ph_track = zeros(nysm, 1);
-for n = 1:nysm
+y = zeros(nsym, 1);
+ph_track = zeros(nsym, 1);
+for n = 1:nsym
     y(n) = z(n) * exp(-1j*ph);
     err = sign(real(y(n)))*imag(y(n)) - sign(imag(y(n)))*real(y(n));
     fr = fr + beta_1*err;
@@ -200,6 +199,13 @@ BER_simulated = num_errors / count_bits;
 figure;
 subplot(1, 2, 1);
 plot(real(z(skip_sym:end)), imag(z(skip_sym:end)), 'r.');
+hold on;  plot([0 0], [-2 2], 'k--');    plot([-2 2], [0 0], 'k--');
+axis([-2 2 -2 2]); grid on;  axis square;
+title(sprintf('Before Costas (offset %d deg)', phase_offset_deg);
+xlabel('I');  ylabel('Q');
+
+subplot(1, 2, 2);
+plot(real(z(skip_sym:end)), imag(z(skip_sym:end)), 'b.');
 hold on;  plot([0 0], [-2 2], 'k--');    plot([-2 2], [0 0], 'k--');
 axis([-2 2 -2 2]); grid on;  axis square;
 title(sprintf('After Costas | Eb/N0 = %.1f dB | BER = %.2e', Eb_N0_meas_dB, BER_simulated));
@@ -302,6 +308,6 @@ fprintf('Link Margin:     %.2f dB\n', uncoded QPSK, BER 1e-5, incl. %.1f dB impl
 fprintf('Bits Counted:    %d\n', count_bits);
 fprintf('Errors:          %d\n', num_errors);
 fprintf('Simulated BER:   %.2e (0 error is expected at this Eb/N0)\n', BER_simulated);
-fprintf('Theoretical BER: %.2e\n', 0.5*erfc(sqrt(10^(Eb_N0_meas_dB/10)));
+fprintf('Theoretical BER: %.2e\n', 0.5*erfc(sqrt(10^(Eb_N0_meas_dB/10))));
 fprintf('==============================\n');
 
