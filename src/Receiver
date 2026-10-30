@@ -1,36 +1,69 @@
 %% PHASE 3: RECEIVER
 
 % Demodulate
-I_dem =  rx_wave .* carrier_cos;
-Q_dem = -rx_wave .* carrier_sin;
+theta = phase_offset_deg*pi/180;
+cos_rx = cos(2*pi*(f_carrier + freq_offset_Hz)*t + theta);
+sin_rx = sin(2*pi*(f_carrier + freq_offset_Hz)*t + theta);
+I_dem =  rx_wave .* cos_rx;
+Q_dem = -rx_wave .* sin_rx;
 
 % Matched RRC Filter
 I_matched = conv(I_dem, h_rrc, 'same');
 Q_matched = conv(Q_dem, h_rrc, 'same');
-
-sample_offset = floor(samples_per_symbol/2);
 I_filt = I_matched(1 : samples_per_symbol : end);
 Q_filt = Q_matched(1 : samples_per_symbol : end);
 
-% Decision — direct sign decision matches the simple mapping above
-% I positive -> bit1 = 0, I negative -> bit1 = 1
-% Q positive -> bit2 = 0, Q negative -> bit2 = 1
-recovered_bits = zeros(num_bits, 1);
-for m = 1:(num_bits/2)
-    recovered_bits((m-1)*2 + 1) = (I_filt(m) < 0);
-    recovered_bits((m-1)*2 + 2) = (Q_filt(m) < 0);
+% Normalise (the signal is in tiny volts)
+scale = mean(abs([I_filt; Q_filt]));
+z     = (I_filt + 1j*Q_filt) / scale;
+
+% --- Costas Loop for QPSK (second order) ---
+alpha = 0.03;
+beta_1 = 0.0005;
+ph = 0;  fr = 0;
+nsym = length(z);
+y = zeros(nsym, 1);
+ph_track = zeros(nsym, 1);
+for n = 1:nsym
+    y(n) = z(n) * exp(-1j*ph);
+    err = sign(real(y(n)))*imag(y(n)) - sign(imag(y(n)))*real(y(n));
+    fr = fr + beta_1*err;
+    ph = ph + fr+ alpha*err;
+    ph_track(n) = ph;
 end
 
-% Count errors
-num_errors    = sum(bits(7:end-6) ~= recovered_bits(7:end-6));
-BER_simulated = num_errors / (num_bits - 12);
+I_rec = real(y);
+Q_rec = imag(y);
 
-% Plot received constellation
+% Decisions
+recovered_bits = zeros(num_bits, 1);
+recovered_bits(1:2:end) = (I_rec < 0);
+recovered_bits(2:2:end) = (Q_rec < 0);
+
+% Count errors after the loop has locked
+first_bit = 2*skip_sym + 1;
+count_bits = (num_bits - 6) - first_bit + 1;
+num_errors = sum(bits(first_bit:end-6) ~= recovered_bits(first_bit:end-6));
+BER_simulated = num_errors / count_bits;
+
+% Plot: before and after the Costas Loop
 figure;
-plot(I_filt, Q_filt, 'b.');
-hold on;
-plot([0 0], [-2 2], 'k--');
-plot([-2 2], [0 0], 'k--');
-axis([-2 2 -2 2]); grid on;
-title(sprintf('Received Constellation | Eb/N0=%.1f dB | BER=%.2f%%', Eb_N0_dB, BER_simulated*100));
-xlabel('I'); ylabel('Q');
+subplot(1, 2, 1);
+plot(real(z(skip_sym:end)), imag(z(skip_sym:end)), 'r.');
+hold on;  plot([0 0], [-2 2], 'k--');    plot([-2 2], [0 0], 'k--');
+axis([-2 2 -2 2]); grid on;  axis square;
+title(sprintf('Before Costas (offset %d deg)', phase_offset_deg));
+xlabel('I');  ylabel('Q');
+
+subplot(1, 2, 2);
+plot(real(y(skip_sym:end)), imag(y(skip_sym:end)), 'b.');
+hold on;  plot([0 0], [-2 2], 'k--');    plot([-2 2], [0 0], 'k--');
+axis([-2 2 -2 2]); grid on;  axis square;
+title(sprintf('After Costas | Eb/N0 = %.1f dB | BER = %.2e', Eb_N0_meas_dB, BER_simulated));
+xlabel('I');  ylabel('Q');
+
+% Phase estimate over time
+figure;
+plot(ph_track*180/pi);  grid on;
+xlabel('Symbol');  ylabel('Estimated Phase (deg)');
+title('Costas loop phase estimate');
