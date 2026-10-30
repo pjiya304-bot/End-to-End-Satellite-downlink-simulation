@@ -2,15 +2,14 @@ function h = rrc_filter(t, beta)
 % Root-raised-cosine pulse, symbol period = 1, t in symbol periods
 h = zeros(size(t));
 for i = 1:numel(t)
-  x = t(i);
-if abs(x) < 1e-9
-h(i) = 1 - beta + 4*beta/pi;
-else if abs(abs(x) - 1/(4*beta)) < 1e-9
-h(i) = (beta/sqrt(2)) * ((1+2/pi)*sin(pi/(4*beta)) + (1-2/pi)*cos(pi/(4*beta)));
-
-else
-h(i) = (sin(pi*x*(1-beta)) + 4*beta*x*cos(pi*x*cos(pi*x*(1+beta))) / (pi*x*(1-(4*beta*x)^2));
-  end
+    x = t(i);
+    if abs(x) < 1e-9
+        h(i) = 1 - beta + 4*beta/pi;
+    elseif abs(abs(x) - 1/(4*beta)) < 1e-9
+        h(i) = (beta/sqrt(2)) * ((1+2/pi)*sin(pi/(4*beta)) + (1-2/pi)*cos(pi/(4*beta)));
+    else
+        h(i) = (sin(pi*x*(1-beta)) + 4*beta*x*cos(pi*x*(1+beta))) / (pi*x*(1-(4*beta*x)^2));
+    end
 end
-h = h / sqrt(sum(h.^2));
+h = h / sqrt(sum(h.^2));   % unit energy
 end
