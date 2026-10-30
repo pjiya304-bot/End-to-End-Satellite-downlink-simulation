@@ -84,7 +84,7 @@ rx_antenna_gain_dB = 40;
 EIRP_dBW = tx_power_dBW + tx_antenna_gain_dB;
 
 % Losses, listed separately
-rain_loss_dB = 0;
+rain_loss_dB = 4;
 gas_loss_dB = 0.2;
 pointing_loss_dB = 0.5;
 pol_loss_dB = 0.3;
@@ -129,7 +129,7 @@ Pn_meas = mean(noise .^2) / impedance;
 N0_meas = Pn_meas / B_sim;
 Eb_N0_meas_lin = (Ps_meas / Rb) / N0_meas;
 Eb_N0_meas_dB = 10*log10(Eb_N0_meas_lin);
-Eb_N0_meas_dB = Es_N0_meas_dB + 10*log10(2);
+Es_N0_meas_dB = Eb_N0_meas_dB + 10*log10(2);
 CN0_dBHz = 10*log10(Ps_meas / N0_meas);
 SNR_dB = 10*log10(Ps_meas / Pn_meas);
 
@@ -167,8 +167,8 @@ scale = mean(abs([I_filt; Q_filt]));
 z     = (I_filt + 1j*Q_filt) / scale;
 
 % --- Costas Loop for QPSK (second order) ---
-alpha = 0.10;
-beta_1 = 0.005;
+alpha = 0.03;
+beta_1 = 0.0005;
 ph = 0;  fr = 0;
 nsym = length(z);
 y = zeros(nsym, 1);
@@ -201,11 +201,11 @@ subplot(1, 2, 1);
 plot(real(z(skip_sym:end)), imag(z(skip_sym:end)), 'r.');
 hold on;  plot([0 0], [-2 2], 'k--');    plot([-2 2], [0 0], 'k--');
 axis([-2 2 -2 2]); grid on;  axis square;
-title(sprintf('Before Costas (offset %d deg)', phase_offset_deg);
+title(sprintf('Before Costas (offset %d deg)', phase_offset_deg));
 xlabel('I');  ylabel('Q');
 
 subplot(1, 2, 2);
-plot(real(z(skip_sym:end)), imag(z(skip_sym:end)), 'b.');
+plot(real(y(skip_sym:end)), imag(y(skip_sym:end)), 'b.');
 hold on;  plot([0 0], [-2 2], 'k--');    plot([-2 2], [0 0], 'k--');
 axis([-2 2 -2 2]); grid on;  axis square;
 title(sprintf('After Costas | Eb/N0 = %.1f dB | BER = %.2e', Eb_N0_meas_dB, BER_simulated));
@@ -220,8 +220,8 @@ title('Costas loop phase estimate');
 %% PHASE 4: BER CURVE
 
 Eb_N0_range_dB = 0:1:8;
-BER_sim     = nan(size9Eb_N0_range_dB));
-target_errros = 100;
+BER_sim     = nan(size(Eb_N0_range_dB));
+target_errors = 100;
 chunk_bits = 20000;
 max_bits = 2e6;
 
@@ -234,14 +234,14 @@ while total_errors < target_errors && total_bits < max_bits
 nsym = chunk_bits/2;
 
 b = randi([0,1], chunk_bits, 1);
-bp = reshape(b, 2, nsym);
+bp = reshape(b, 2, nsym).';
 I_s = 1 - 2*bp(:,1);
 Q_s = 1 - 2*bp(:,2);
 
-I_u = zeros(nysm*samples_per_symbol, 1);  I_u(1:samples_per_symbol:end)
-Q_u = zeros(nysm*samples_per_symbol, 1);  Q_u(1:samples_per_symbol:end)
+I_u = zeros(nsym*samples_per_symbol, 1);  I_u(1:samples_per_symbol:end) = I_s;
+Q_u = zeros(nsym*samples_per_symbol, 1);  Q_u(1:samples_per_symbol:end) = Q_s;
 I_sh = conv(I_u, h_rrc, 'same');
-Q_sh = conv(Q_u, h_rcc, 'same');
+Q_sh = conv(Q_u, h_rrc, 'same');
 
 tt = (0:length(I_u)-1).' / fs;
 cc = cos(2*pi*f_carrier*tt);
@@ -269,7 +269,7 @@ total_errors = total_errors + sum(b(7:end-6) ~= rb(7:end-6));
 total_bits = total_bits + (chunk_bits - 12);
 end
 
-if total_erros > 0
+if total_errors > 0
     BER_sim(idx) = total_errors / total_bits;
  end
 end
@@ -282,8 +282,8 @@ BER_op = 0.5*erfc(sqrt(Eb_N0_meas_lin));
 figure;
 semilogy(EbN0_fine, BER_theory, 'b-', 'LineWidth', 2);
 hold on;
-semilogy(Eb_No_range_dB, BER_sim, 'ro', 'MarkerFaceColor', 'r');
-semilogy(Eb_N0_meas_dB, BER_op, 'ks', 'MarkerFaceColor', 'g', MarkerSize', 10);
+semilogy(Eb_N0_range_dB, BER_sim, 'ro', 'MarkerFaceColor', 'r');
+semilogy(Eb_N0_meas_dB, BER_op, 'ks', 'MarkerFaceColor', 'g', 'MarkerSize', 10);
 grid on;
 xlabel('Eb/N0 (dB)');
 ylabel('BER');
@@ -291,23 +291,22 @@ title('BER vs Eb/N0; QPSK Simulation vs Theory');
 legend('Theory', 'Simulation (>=100 errors/point)', ...
     sprintf('Link operating point (theory BER = %.1e)', BER_op), ...
     'Location', 'southwest');
-ylim([1e-9 1]);
+ylim([1e-14 1]);
    
 %% RESULTS
 fprintf('\n=== SATELLITE LINK RESULTS ===\n');
 fprintf('Slant range:     %.0f km\n', d_satellite/1e3);
 fprintf('EIRP:            %.2f dBW\n', EIRP_dBW);
-fprintf('FSPL:            %.2f dB\n', fspl_db);
-fprintf('Total Loss:      %.2f dB\n', total_loss_db);
+fprintf('FSPL:            %.2f dB\n', fspl_dB);
+fprintf('Total Loss:      %.2f dB\n', total_loss_dB);
 fprintf('Prx:             %.2f dBW\n', Prx_dBW);
 fprintf('G/T:             %.2f dB/K\n', GT_dBK);
 fprintf('C/N0:            %.2f dB-Hz\n', CN0_dBHz);
-fprintf('Eb/N0 (budget):  %.2f dB\n', Eb_No_dB);
+fprintf('Eb/N0 (budget):  %.2f dB\n', Eb_N0_dB);
 fprintf('Eb/N0 (sim):     %.2f dB\n', Eb_N0_meas_dB);
-fprintf('Link Margin:     %.2f dB\n', uncoded QPSK, BER 1e-5, incl. %.1f dB impl. loss)\n', link_margin_dB, impl_loss_dB);
+fprintf('Link Margin:     %.2f dB (uncoded QPSK, BER 1e-5, incl. %.1f dB impl. loss)\n', link_margin_dB, impl_loss_dB);
 fprintf('Bits Counted:    %d\n', count_bits);
 fprintf('Errors:          %d\n', num_errors);
-fprintf('Simulated BER:   %.2e (0 error is expected at this Eb/N0)\n', BER_simulated);
+fprintf('Simulated BER:   %.2e\n', BER_simulated);
 fprintf('Theoretical BER: %.2e\n', 0.5*erfc(sqrt(10^(Eb_N0_meas_dB/10))));
 fprintf('==============================\n');
-
