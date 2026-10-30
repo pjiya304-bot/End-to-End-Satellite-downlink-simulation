@@ -73,3 +73,21 @@ legend('Theory', 'Simulation (>=100 errors/point)', ...
     sprintf('Link operating point (theory BER = %.1e)', BER_op), ...
     'Location', 'southwest');
 ylim([1e-14 1]);
+
+%% RESULTS
+fprintf('\n=== SATELLITE LINK RESULTS ===\n');
+fprintf('Slant range:     %.0f km\n', d_satellite/1e3);
+fprintf('EIRP:            %.2f dBW\n', EIRP_dBW);
+fprintf('FSPL:            %.2f dB\n', fspl_dB);
+fprintf('Total Loss:      %.2f dB\n', total_loss_dB);
+fprintf('Prx:             %.2f dBW\n', Prx_dBW);
+fprintf('G/T:             %.2f dB/K\n', GT_dBK);
+fprintf('C/N0:            %.2f dB-Hz\n', CN0_dBHz);
+fprintf('Eb/N0 (budget):  %.2f dB\n', Eb_N0_dB);
+fprintf('Eb/N0 (sim):     %.2f dB\n', Eb_N0_meas_dB);
+fprintf('Link Margin:     %.2f dB (uncoded QPSK, BER 1e-5, incl. %.1f dB impl. loss)\n', link_margin_dB, impl_loss_dB);
+fprintf('Bits Counted:    %d\n', count_bits);
+fprintf('Errors:          %d\n', num_errors);
+fprintf('Simulated BER:   %.2e\n', BER_simulated);
+fprintf('Theoretical BER: %.2e\n', 0.5*erfc(sqrt(10^(Eb_N0_meas_dB/10))));
+fprintf('==============================\n');
