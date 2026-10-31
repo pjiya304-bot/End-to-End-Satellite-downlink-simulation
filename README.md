@@ -15,9 +15,9 @@
 
 ## The story in 30 seconds
 A geostationary satellite sits about 36,000 km above the equator. By the time its signal reaches the ground, it has lost more than **200 dB** of power and arrives at roughly a picowatt. The receiver still has to recover every bit from that faint signal.
-This project simulates that whole journey at the physical layer, from random bits to recovered bits. The key design choice: **the link budget drives the channel.** Noise is not a number picked by hand. It is calculated from the system noise temperature and the transmit power, distance and antenna gains.
+This project simulates that whole journey at the physical layer, from random bits to recovered bits. The key design choice: **the link budget drives the channel.** The signal is scaled to the received power in watts and the noise is generated from kTB using the system noise temperature. Eb/N0 is then **measured from the simulated waveforms** and compared with the budget, so the simulation can genuinely disagree with the calculation.
 
-| 47 dBW | 205.15 dB | 14.18 dB | +4.58 dB |
+| 47 dBW | 205.57 dB | 14.26 dB | +3.16 dB |
 |:---:|:---:|:---:|:---:|
 | EIRP | Path Loss | Clear-sky Eb/N0 | Link Margin |
 
@@ -29,16 +29,21 @@ This project simulates that whole journey at the physical layer, from random bit
 | Metric | Value | 
 |---|---|
 | EIRP | 47 dBW |
-| Free-space path loss | 205.15 dB |
-| Pointing and Miscellaneous losses | 1.5 dB |
-| Total loss | 206.65 dB |
+| Slant range ( 40 deg elevation ) | 37,780 km |
+| Free-space path loss | 205.57 dB |
+| Other losses ( gas, pointing, polarization ) | 1.0 dB |
+| Total loss | 206.57 dB |
 | Received antenna gain | 40 dBi |
-| Received power | -119.65 dBW (about 1pW) |
+| Received power | -119.57 dBW (about 1.1 pW) |
 | System noise temperature | 150 K |
-| Eb/N0 | 14.18 dB |
+| G/T | 18.24 dB/K |
+| C/N0 | 87.21 dB-Hz |
+| Eb/N0 (budget/measured in simulation) | 14.26 dB/ 14.20 dB |
 | Required Eb/N0 (uncoded QPSK, BER 1e-5) | 9.6 dB |
-| Link margin | +4.58 dB |
-| Theoretical BER | 2.33e-13 |
+| Demodulator implementation loss | 1.5 dB |
+| Link margin | +3.16 dB |
+| Theoretical BER at 14.2 dB | 2.0e-13 |
+| Simulated errors | 0 of 7,994 bits (expected: too few bits to see 1e-13) |
 
 ---
 
@@ -77,17 +82,20 @@ I --> J
 
 ## How It Works
 
-1. **Map:** Bits are paired into QPSK symbols. The first bit sets the sign of I, the second sets the sign of Q.
-2. **Shape:** Symbols are upsampled and filtered with a root-raised-cosine (RRC) pulse, then modulated onto a carrier.
-3. **Channel:** The signal is scaled by the link-budget loss. Gausssian noise is added at the Eb/N0 the budget predicts.
-4. **Recover:** The receiver demodulates, applies the matched RRC filter, samples once per symbol and decides by sign.
-5. **Score:** Errors are counted, skipping the first and last 3 symbols where the filter has not settled.
+1. **Map:** random bits are paired into QPSK symbols. The first bit sets the sign of I, the second sets the sign of Q.
+2. **Shape:** symbols are upsampled (10 samples/symbol) and filtered with a root-raised-cosine (RRC) pulse, then modulated onto orthogonal cosine and sine carriers.
+3. **Channel:** the unit-power waveform is scaled to the received power from the link budget. Thermal noise is generated from kTB. Eb/N0, Es/N0, C/N0 and SNR are measured from the actual waveforms and compared with the budget.
+4. **Recover:** the receiver demodulates with a local oscillator that has a 25 degree phase error, applies the matched RRC filter, samples once per symbol, and removes the phase error with a second-order Costas loop. Bits are decided by sign.
+5. **Score:** errors are counted after the first 1,000 symbols (loop lock time) and excluding the last 3 symbols (filter edge).
+6. **Validate:** a separate BER sweep (0 to 8 dB, at least 100 errors per point) is compared with the QPSK theory curve, and the link's operating point is drawn on it.
+
 
 ## Link Budget
 > 1. EIRP = P_tx + G_tx = 17 dBW + 30 dBi = 47 dBW
-> 2. FSPL = 20*log10(4*pi*d*f / c) = 205.15 dB (d = 36,000 km, f = 12 GHz)
-> 3. P_rx = EIRP - FSPL - L_misc +G_rx = -119.65 dBW
-> 4. EB/N0 = P_rx - 10*log10(k * T_sys * Rb)
+> 2. d    = -Re*sin(el) + sqrt((Re*sin(el))^2 + h^2 + 2*Re*h)   (GEO slant height)
+> 4. FSPL = 20*log10(4*pi*d*f / c) = 205.15 dB (d = 36,000 km, f = 12 GHz)
+> 5. P_rx = EIRP - FSPL - L_misc +G_rx = -119.65 dBW
+> 6. EB/N0 = P_rx - 10*log10(k * T_sys * Rb)
 
 **EIRP** (effective isotropic radiated power) is transmit power plus transmit antenna gain. It is the power an ideal antenna radiating equally in all directions would need ot match the satellite's signal in the direction of its main beam.
 
