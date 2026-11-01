@@ -17,9 +17,16 @@
 A geostationary satellite sits about 36,000 km above the equator. By the time its signal reaches the ground, it has lost more than **200 dB** of power and arrives at roughly a picowatt. The receiver still has to recover every bit from that faint signal.
 This project simulates that whole journey at the physical layer, from random bits to recovered bits. The key design choice: **the link budget drives the channel.** The signal is scaled to the received power in watts and the noise is generated from kTB using the system noise temperature. Eb/N0 is then **measured from the simulated waveforms** and compared with the budget, so the simulation can genuinely disagree with the calculation.
 
-| 47 dBW | 205.57 dB | 14.26 dB | +3.16 dB |
-|:---:|:---:|:---:|:---:|
-| EIRP | Path Loss | Clear-sky Eb/N0 | Link Margin |
+The script ships with a 4dB rain-fade scenario as its default and clear sky is one line away (rain_loss_dB = 0).
+
+|  | Clear sky | 4 dB rain (default) |
+|:---:|:---:|:---:|
+| Total loss | 206.57 dB | 210 dB |
+| Received power | -119.57 dBW | -123.57 dBW |
+| Eb/N0 (budget/simulated) | 14.26/14.20 dB | 7.03/6.97 dB |
+| Link margin | +3.16 dB | -4.07 dB |
+| Theoretical BER | 2.0e-13 | 8.0e-4 |
+| Simulated BER | 0 errors in 7,994 bits | 1.13e-3 (9 errors in 7,994 bits) |
 
 </div>
 
@@ -93,25 +100,15 @@ I --> J
 ## Link Budget
 > 1. EIRP = P_tx + G_tx = 17 dBW + 30 dBi = 47 dBW
 > 2. d    = -Re*sin(el) + sqrt((Re*sin(el))^2 + h^2 + 2*Re*h)   (GEO slant height)
-> 4. FSPL = 20*log10(4*pi*d*f / c) = 205.15 dB (d = 36,000 km, f = 12 GHz)
-> 5. P_rx = EIRP - FSPL - L_misc +G_rx = -119.65 dBW
-> 6. EB/N0 = P_rx - 10*log10(k * T_sys * Rb)
+> 4. FSPL = 20*log10(4*pi*d*f / c) 
+> 5. P_rx = EIRP - G_rx - FSPL - L_rain - L_gas - L_pointing - L_pol
+> 6. T_sys = 150 K + 275 K * (1 - 10^(-A_rain/10))
+> 7. G?T = G_rx - 10*log10(T_sys)
+> 8. C/N0 = P_rx - 10*log10(k * T_sys)
+> 9. Eb/N0 = P_rx - 10*log10(k * T_sys * Rb)
+> 10. Margin = Eb/N0 - L_impl - 9.6 dB
 
 **EIRP** (effective isotropic radiated power) is transmit power plus transmit antenna gain. It is the power an ideal antenna radiating equally in all directions would need ot match the satellite's signal in the direction of its main beam.
-
-## Weather Sensitivity
-Extra fade does two things: it weakens the signal and it raises the receiver's noise floor, so a budget that only subtracts the fade underestimates the damage.
-
-T_sys = 150 K + 275 K * (1-10^(-A_fade / 10))
-
-| Fade | Condition | Eb/N0 | Margin | Theory BER | Sim BER |
-|---|---|---|---|---|---|
-| 0 dB | Clear | 14.18 | +4.58 | 2.33e-13 | n/a |
-| 1.5 dB | Light | 10.82 | +1.22 | ~4.5e-07 | n/a |
-| 3.5 dB | Moderate | 7.64 | -1.96 | 3.28e-04 | TBD |
-| 5.0 dB | Heavy | 5.65 | -3.95 | ~3.4e-03 | TBD |
-
-The link meets its target up to roughly 2.2 dB of fade. Eb/N0 and margin are in dB. BERs below about 1e-5 cannot be measured by direct simulation in reasonable time, so they are reported from theory only.
 
 ---
 
@@ -122,42 +119,26 @@ The link meets its target up to roughly 2.2 dB of fade. Eb/N0 and margin are in 
 | Modulation | QPSK, 20 Mb/s (10 Msym/s) |
 | Sampling | 100 MHz, 10 samples/symbol |
 | Carrier | 10 MHz IF stand-in (budget uses 12 GHZ) |
-| Pulse Shaping | RRC, beta 0.35, span 6 symbols |
-| Distance | 36,000 km (GEO) |
-| EIRP | 47 dBW (17 dBW + 30 dBi) |
-| Receive Gain | 40 dBi |
-| Pointing and misc. loss(including atmospheric gases) | 1.5 dB |
-| Weather fade scenarios | 0 to 5 dB |
+| Pulse Shaping | RRC, roll-off 0.35, span 6 symbols |
+| Occupied bandwidth | about 13.5 MHz |
+| Geometry | GEO altitude 35,786 km, 40 degree elevation, slant range 37,780 km |
+| EIRP | 47 dBW |
+| Received gain | 40 dBi |
+| System temperature | 150 k clear sky, raises with rain |
+| Losses | gas 0.2 dB, pointing 0.5 dB, polarization 0.3 dB, rain 0 to 5 dB; implementation loss 105 dB (margin only) |
+| Costas loop gain | alpha = 0.03, beta_1 = 0.0005 |
 | Required Eb/N0 | 9.6 dB (uncoded QPSK, BER 1e-5) |
 
 ---
 
 ## Validation 
 
-- Simulated BER tracks the theoretical curve across the Eb/N0 sweep.
-- **0 errors** at 40 dB Eb/N0, confirming timing and filter alignment.
-- Eb/N0 values match hand calculations of the link budget.
+- Simulated BER lies on the theoretical QPSK curve from 0 to 8 dB, with atleast 100 errors per point.
+- Budget and measured EB/N0 agree within 0.06 dB in both clear sky (14.26 vs 14.20 dB) and 4 dB rain (7.03 vs 6.97 dB).
+- The Costas loop recovers a 25 degree phase offset: the before/after constellations and the phase estimate settle at about -25 degrees.
+- In the 4 dB rain run, 9 errors in 7,994 bits is consistent with the theoretical 8.0e-4.
 
 ---
-
-<details>
-  <summary><b>How I built it</b></summary>
-
-  <br>
-
-Built one stage at a time, each tested before the next:
-
-1. **Theory first:** QPSK, I/Q, constellations, SNR, link budgets, pulse shaping, matched filtering, ISI and RRC design.
-2. **Transmitter, channel, receiver**, then a BER sweep against theory.
-3. **Realism pass:** 12GHz budget, 40 dBi antenna, noise from system temperature, and finally sky noise.
-4. **Debugging against theory.** Real bugs found and fixed:
-   - the receiver sampled between symbols, not at the filter peak
-   - the RRC filter had uneven tap spacing that shifted its peak
-   - the BER-curve transmitter used a different pulse than the main one
-   - filter edge effects inflated the error count
-   - typos and missing semicolons that stopped the script
-
-**Tools:** GNU Octave (via Octave Online), no toolboxes. Theory uses `erfc` instead of `qfunc`,  so no communication package is needed.
 
 </details>
 
@@ -165,13 +146,14 @@ Built one stage at a time, each tested before the next:
   <summary><b>Model vs A Real Satellite</summary>
 
     <br>
-| This Model | A Real System |
-|---|---|
-| Perfect carrier and timing sync | Costas loop / PLL, timing recovery |
-| Uncoded QPSK | LDPC/BCH or convolution coding |
-| Fixed 36,000 km | Slant range varies with ground-station location | |
-| Gas absorption folded into the fixed 105 dB loss | Separate oxygen and water vapour loss |
-| Linear amplifier | Non linear TWTA with back-off |
+Model vs a Real Satellite
+> 1. **Perfect symbol timing.** The receiver samples at exact instant. A real receiver needs timing recovery (for example Gardener).
+> 2. **No amplifier nonlinearity**. Real satellite TWTAs compress and distort the signal.
+> 3. No **phase noise** on either oscillator and no doppler or frequency offset in the default run.
+> 4. No **forward error correction**. Real links use LDPC or convolutional codes and work far below 9.6 dB.
+> 5. **Costas phase ambiguity.** A QPSK Costas loop can lock 90, 180, 270 degrees away from the true phase. It locks correctly here because the offset is under 45 degrees. Real systems use a preamble or differential coding.
+> 6. **The BER sweep uses an ideal receiver** (no phase offset, no Costas loop) and sets noise from the swept Eb/N0, so it validates the modulator, filters and decision rule rather than the carrier recovery.
+> 7. **Carrier.** The simulation runs at a 10 MHz IF, standing in for 12 GHz. The modulation maths is the same.
 </details>
 
 ---
@@ -179,6 +161,8 @@ Built one stage at a time, each tested before the next:
 ## Roadmap
 
 - [ ] Carrier phase/frequency offset with Costas-loop recovery
+- [ ] Fade scenarios
+- [ ] Symbol timing recovery 
 - [ ] Forward error correction and coded-BER comparison
 - [ ] Fade sweep: Eb/N0 vs attenuation
 - [ ] Link-margin recovery study (dish size, power, coding)
@@ -199,19 +183,10 @@ cd End-to-End-Satellite-downlink-simulation
 Run the scripts in `src/` in order: transmitter, channel, receiver, BER curve. Change the weather with one line:
 
 ```matlab
-rain_loss_db = 3.5;   % 0 clear, 1.5 light, 3.5 moderate, 5 heavy
+rain_loss_db = 4;   % 0 clear, 1.5 light, 3.5 moderate, 4 heavy, 5 severe
 ```
 
 Set `num_bits = 100000` for a measurable BER at 3.5 dB.
-
-```
-
-.
-|-- src/              transmitter, channel, receiver, BER curve
-|-- docs/figures/     constellations, waveforms, BER curve
-|-- docs/report.pdf   IEEE-format report
-|-- README.md
-```
 
 ---
 
