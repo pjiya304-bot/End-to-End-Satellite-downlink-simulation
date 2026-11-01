@@ -186,8 +186,6 @@ Run the scripts in `src/` in order: transmitter, channel, receiver, BER curve. C
 rain_loss_db = 4;   % 0 clear, 1.5 light, 3.5 moderate, 4 heavy, 5 severe
 ```
 
-Set `num_bits = 100000` for a measurable BER at 3.5 dB.
-
 ---
 
 ## License
