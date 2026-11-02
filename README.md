@@ -59,7 +59,7 @@ The script ships with a 4dB rain-fade scenario as its default and clear sky is o
 ```mermaid
 flowchart LR
 subgraph SAT["Satellite"]
-a[Bits]
+A[Bits]
 B[QPSK mapper]
 C[RRC shaping]
 D[Carrier mod]
@@ -69,7 +69,7 @@ end
 subgraph CH["Channel"]
 F[Path loss<br/>205.15 dB]
 G[Rain<br/>0 to 5 dB]
-H[Pointing and miscellaneous <br/>loss 1.5 dB]
+H[Pointing and other <br/>losses]
 I[AWGN from<br/>link budget]
 F --> G --> H --> I
 end
