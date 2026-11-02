@@ -63,26 +63,26 @@ A[Bits]
 B[QPSK mapper]
 C[RRC shaping]
 D[Carrier mod]
-E[17dBW + 30dBi]
-A --> B --> C --> D --> E
+
+A --> B --> C --> D 
 end
 subgraph CH["Channel"]
-F[Path loss<br/>205.15 dB]
-G[Rain<br/>0 to 5 dB]
-H[Pointing and other <br/>losses]
-I[AWGN from<br/>link budget]
-F --> G --> H --> I
+E[Path loss<br/>205.15 dB]
+F[Rain<br/>0 to 5 dB]
+G[Pointing and other <br/>losses]
+H[AWGN from<br/>link budget]
+E --> F --> G --> H
 end
 subgraph GS["Ground Station"]
-J[40 dBi antenna]
-K[Demod I/Q]
-L[Matched RRC]
-M[Sample + decide]
-N[Recovered bits]
-J --> K --> L --> M --> N
+I[40 dBi antenna]
+J[Demod I/Q]
+K[Matched RRC]
+L[Sample + decide]
+M[Recovered bits]
+I --> J --> K --> L --> M
 end
-E --> F
-I --> J
+D --> E
+H --> I
 ```
 
 ---
