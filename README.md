@@ -145,7 +145,7 @@ H --> I
 <details>
   <summary><b>Model vs A Real Satellite</summary>
 
-    <br>
+    
 Model vs a Real Satellite
 > 1. **Perfect symbol timing.** The receiver samples at exact instant. A real receiver needs timing recovery (for example Gardener).
 > 2. **No amplifier nonlinearity**. Real satellite TWTAs compress and distort the signal.
